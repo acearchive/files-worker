@@ -1,0 +1,35 @@
+{
+  "name": "files.acearchive.lgbt",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloud functions for hosting files on Ace Archive",
+  "homepage": "https://github.com/acearchive/files.acearchive.lgbt#readme",
+  "bugs": {
+    "url": "https://github.com/acearchive/files.acearchive.lgbt/issues"
+  },
+  "scripts": {
+    "format": "prettier --write '**/*.ts'",
+    "lint": "eslint src/**/*.ts && prettier --check '**/*.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acearchive/files.acearchive.lgbt"
+  },
+  "author": {
+    "name": "Frawley",
+    "url": "https://github.com/frawleyskid"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.14.1",
+    "@typescript-eslint/eslint-plugin": "^5.32.0",
+    "@typescript-eslint/parser": "^5.32.0",
+    "eslint": "^8.21.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-typescript": "^3.0.0",
+    "miniflare": "^2.6.0",
+    "prettier": "^2.7.1",
+    "typescript": "^4.7.4",
+    "wrangler": "^2.0.24"
+  }
+}
