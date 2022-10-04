@@ -24,23 +24,33 @@ type ParseUrlResult =
 
 const parseUrl = (request: Request): ParseUrlResult => {
   const url = new URL(request.url);
-  const pathComponents = url.pathname.split("/", 3);
+
+  // Remove any leading forward slash.
+  const pathComponents = url.pathname.replace("/", "").split("/");
 
   if (pathComponents.length < 3) {
     return { isValid: false, response: Status.NotFound(request) };
   }
 
-  const [namespace, artifactSlug, fileName] = pathComponents;
+  // A file name can contain forward slashes.
+  const [namespace, artifactSlug, ...fileNameSegments] = pathComponents;
 
   if (
     namespace !== "artifacts" ||
     artifactSlug.length === 0 ||
-    fileName.length === 0
+    fileNameSegments.length === 0
   ) {
     return { isValid: false, response: Status.NotFound(request) };
   }
 
-  return { isValid: true, artifactSlug, fileName };
+  return {
+    isValid: true,
+    artifactSlug,
+    fileName: fileNameSegments
+      // This normalizes paths with multiple consecutive slashes.
+      .filter((segment) => segment.length > 0)
+      .join("/"),
+  };
 };
 
 export default {
