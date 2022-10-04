@@ -1,0 +1,15 @@
+name = "acearchive-lgbt-files"
+main = "./src/index.ts"
+compatability_date = "2022-10-04"
+account_id = "9d143afa60e911e9904e835bd1db8504"
+route = "files.acearchive.lgbt/*"
+
+[[kv_namespaces]]
+binding = "ARTIFACTS_KV"
+id = "17d335a0392045a499e5b7b2af8e4321"
+preview_id = "17d335a0392045a499e5b7b2af8e4321"
+
+[[r2_buckets]]
+binding = "ARTIFACTS_R2"
+bucket_name = "acearchive-lgbt-artifacts"
+preview_bucket_name = "acearchive-lgbt-artifacts"
