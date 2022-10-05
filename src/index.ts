@@ -24,15 +24,25 @@ const Status = {
   },
 };
 
-type ParseUrlResult =
+export type ParseUrlResult =
   | { isValid: true; artifactSlug: string; fileName: string }
   | { isValid: false; response: Response };
 
-const parseUrl = (request: Request): ParseUrlResult => {
+export const parseUrl = (request: Request): ParseUrlResult => {
   const url = new URL(request.url);
 
-  // Remove any leading forward slash.
-  const pathComponents = url.pathname.replace("/", "").split("/");
+  // Remove the leading forward slash.
+  const urlPath = url.pathname.replace("/", "");
+
+  // Remove any trailing forward slash.
+  const pathComponents = url.pathname.endsWith("/")
+    ? urlPath.slice(0, -1).split("/")
+    : urlPath.split("/");
+
+  // Fail if there are any consecutive slashes in the URL.
+  if (pathComponents.some((component) => component.length === 0)) {
+    return { isValid: false, response: Status.NotFound(request) };
+  }
 
   if (pathComponents.length < 3) {
     return { isValid: false, response: Status.NotFound(request) };
@@ -41,10 +51,12 @@ const parseUrl = (request: Request): ParseUrlResult => {
   // A file name can contain forward slashes.
   const [namespace, artifactSlug, ...fileNameSegments] = pathComponents;
 
+  const fileName = fileNameSegments.join("/");
+
   if (
     namespace !== "artifacts" ||
     artifactSlug.length === 0 ||
-    fileNameSegments.length === 0
+    fileName.length === 0
   ) {
     return { isValid: false, response: Status.NotFound(request) };
   }
@@ -52,24 +64,23 @@ const parseUrl = (request: Request): ParseUrlResult => {
   return {
     isValid: true,
     artifactSlug,
-    fileName: fileNameSegments
-      // This normalizes paths with multiple consecutive slashes.
-      .filter((segment) => segment.length > 0)
-      .join("/"),
+    fileName,
   };
 };
 
-type RangeRequest =
+export type RangeRequest =
   | { kind: "until-end"; offset: number }
   | { kind: "inclusive"; offset: number; length: number }
   | { kind: "suffix"; suffix: number }
   | { kind: "whole-document" };
 
-type ParseRangeRequestResponse =
+export type ParseRangeRequestResponse =
   | { isValid: true; range: Readonly<RangeRequest> }
   | { isValid: false; reason: string };
 
-function parseRangeRequest(encoded?: string): ParseRangeRequestResponse {
+export const parseRangeRequest = (
+  encoded?: string
+): ParseRangeRequestResponse => {
   if (encoded === undefined || encoded.trim().length === 0) {
     return {
       isValid: true,
@@ -117,7 +128,7 @@ function parseRangeRequest(encoded?: string): ParseRangeRequestResponse {
       },
     };
   }
-}
+};
 
 export default {
   async fetch(
