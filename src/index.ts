@@ -94,10 +94,14 @@ export const parseUrl = (request: Request): ParseUrlResult => {
 
   // Fail if there are any consecutive slashes in the URL.
   if (pathComponents.some((component) => component.length === 0)) {
+    console.log("Request URL contained consecutive slashes.");
     return { isValid: false };
   }
 
   if (pathComponents.length < 3) {
+    console.log(
+      "Request URL did not have enough path segments for a valid URL."
+    );
     return { isValid: false };
   }
 
@@ -106,11 +110,14 @@ export const parseUrl = (request: Request): ParseUrlResult => {
 
   const fileName = fileNameSegments.join("/");
 
-  if (
-    namespace !== "artifacts" ||
-    artifactSlug.length === 0 ||
-    fileName.length === 0
-  ) {
+  if (namespace !== "artifacts") {
+    console.log(
+      "Request URL included a path that did not start with `/artifacts/`"
+    );
+    return { isValid: false };
+  }
+
+  if (artifactSlug.length === 0 || fileName.length === 0) {
     return { isValid: false };
   }
 
@@ -147,11 +154,13 @@ export const parseRangeRequest = (
 
   const [unit, encodedRanges] = encoded.split("=");
 
-  if (unit.trim() !== "bytes")
+  if (unit.trim() !== "bytes") {
+    console.log("Request `Range` header included a unit other than `bytes`.");
     return {
       isValid: false,
       reason: "units other than `bytes` are not supported",
     };
+  }
 
   const encodedRangeList = encodedRanges.split(",");
 
@@ -164,6 +173,7 @@ export const parseRangeRequest = (
   const [rangeStart, rangeEnd] = encodedRangeList[0].split("-");
 
   if (rangeStart.length === 0 && rangeEnd.length === 0) {
+    console.log("Could not parse request `Range` header.");
     return { isValid: false, reason: "failed to parse request header" };
   } else if (rangeStart.length === 0) {
     return {
@@ -319,6 +329,7 @@ const getStorageKey = async ({
   );
 
   if (artifactMetadata === null || artifactMetadata === undefined) {
+    console.log("Artifact metadata was not found in Cloudflare KV.");
     return undefined;
   }
 
@@ -326,13 +337,14 @@ const getStorageKey = async ({
     if (fileName === fileMetadata.fileName) return fileMetadata.storageKey;
   }
 
+  console.log("Artifact file was not found in artifact metadata.");
   return undefined;
 };
 
-const logHeaders = (headers: Headers): void => {
-  for (const [header, value] of headers.entries()) {
-    console.log(`  ${header}: ${value}`);
-  }
+const headersToDebugRepr = (headers: Headers): string => {
+  return Array.from(headers.entries())
+    .map(([header, value]) => `  ${header}: ${value}`)
+    .join("\n");
 };
 
 const hasObjectBody = (
@@ -344,7 +356,7 @@ export default {
     console.log(`${request.method} ${request.url}`);
 
     console.log("Request headers:");
-    logHeaders(request.headers);
+    console.log(headersToDebugRepr(request.headers));
 
     if (request.method !== "GET" && request.method !== "HEAD") {
       return Status.MethodNotAllowed(request);
@@ -386,14 +398,17 @@ export default {
       range: toR2Range(rangeRequest),
     });
 
-    if (object === null) return Status.NotFound(request);
+    if (object === null) {
+      console.log("Artifact file was not found in Cloudflare R2.");
+      return Status.NotFound(request);
+    }
 
     console.log(`Object size: ${object.size}`);
 
     const responseHeaders = getResponseHeaders({ object, rangeRequest });
 
     console.log("Response headers:");
-    logHeaders(responseHeaders);
+    console.log(headersToDebugRepr(responseHeaders));
 
     if (hasObjectBody(object)) {
       if (rangeRequest.kind === "whole-document") {
