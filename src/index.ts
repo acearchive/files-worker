@@ -3,30 +3,82 @@ interface Env {
   ARTIFACTS_R2: R2Bucket;
 }
 
+const artifactKeyVersion = 1;
+
+// These types are a subset of the JSON we store in Cloudflare KV, because we
+// only need the ability to get the S3 key for a given file name.
+type ArtifactFileMetadata = Readonly<{
+  fileName: string;
+  storageKey: string;
+}>;
+
+type ArtifactMetadata = Readonly<{
+  files: ReadonlyArray<ArtifactFileMetadata>;
+}>;
+
+const Header = {
+  Allow: "Allow",
+  Range: "Range",
+  ETag: "ETag",
+  ContentLength: "Content-Length",
+  ContentRange: "Content-Range",
+  AcceptRanges: "Accept-Ranges",
+};
+
+const commonResponseHeaders: Readonly<Record<string, string>> = {
+  [Header.AcceptRanges]: "bytes",
+};
+
 const Status = {
   NotFound(request: Request): Response {
     return new Response(`File ${request.url} not found.`, {
       status: 404,
+      headers: commonResponseHeaders,
     });
   },
 
   MethodNotAllowed(request: Request): Response {
     return new Response(`Method ${request.method} not allowed.`, {
       status: 405,
-      headers: { Allow: "GET, HEAD" },
+      headers: {
+        [Header.Allow]: "GET, HEAD",
+        ...commonResponseHeaders,
+      },
     });
   },
 
   RangeNotSatisfiable(reason: string): Response {
     return new Response(`Invalid or unsupported range request: ${reason}`, {
       status: 416,
+      headers: commonResponseHeaders,
+    });
+  },
+
+  NotModified(headers: Headers): Response {
+    return new Response(undefined, {
+      status: 304,
+      headers,
+    });
+  },
+
+  PartialContent(body: ReadableStream, headers: Headers): Response {
+    return new Response(body, {
+      status: 206,
+      headers,
+    });
+  },
+
+  Ok(body: ReadableStream, headers: Headers): Response {
+    return new Response(body, {
+      status: 200,
+      headers,
     });
   },
 };
 
 export type ParseUrlResult =
   | { isValid: true; artifactSlug: string; fileName: string }
-  | { isValid: false; response: Response };
+  | { isValid: false };
 
 export const parseUrl = (request: Request): ParseUrlResult => {
   const url = new URL(request.url);
@@ -41,11 +93,11 @@ export const parseUrl = (request: Request): ParseUrlResult => {
 
   // Fail if there are any consecutive slashes in the URL.
   if (pathComponents.some((component) => component.length === 0)) {
-    return { isValid: false, response: Status.NotFound(request) };
+    return { isValid: false };
   }
 
   if (pathComponents.length < 3) {
-    return { isValid: false, response: Status.NotFound(request) };
+    return { isValid: false };
   }
 
   // A file name can contain forward slashes.
@@ -58,7 +110,7 @@ export const parseUrl = (request: Request): ParseUrlResult => {
     artifactSlug.length === 0 ||
     fileName.length === 0
   ) {
-    return { isValid: false, response: Status.NotFound(request) };
+    return { isValid: false };
   }
 
   return {
@@ -70,9 +122,11 @@ export const parseUrl = (request: Request): ParseUrlResult => {
 
 export type RangeRequest =
   | { kind: "until-end"; offset: number }
-  | { kind: "inclusive"; offset: number; length: number }
+  | { kind: "inclusive"; offset: number; end: number; length: number }
   | { kind: "suffix"; suffix: number }
   | { kind: "whole-document" };
+
+type PartialRangeRequest = Exclude<RangeRequest, { kind: "whole-document" }>;
 
 export type ParseRangeRequestResponse =
   | { isValid: true; range: Readonly<RangeRequest> }
@@ -126,19 +180,137 @@ export const parseRangeRequest = (
       range: {
         kind: "inclusive",
         offset: Number(rangeStart),
+        end: Number(rangeEnd),
         length: Number(rangeEnd) + 1 - Number(rangeStart),
       },
     };
   }
 };
 
+const toR2Range = (request: RangeRequest): R2Range | undefined => {
+  switch (request.kind) {
+    case "until-end":
+      return { offset: request.offset };
+    case "inclusive":
+      return { offset: request.offset, length: request.length };
+    case "suffix":
+      return { suffix: request.suffix };
+    case "whole-document":
+      return undefined;
+  }
+};
+
+// This SO answer has some excellent examples for how HTTP range headers should
+// be formatted:
+//
+// https://stackoverflow.com/a/8507991
+
+const toContentRangeHeaderValue = (
+  request: PartialRangeRequest,
+  totalSize: number
+): string => {
+  switch (request.kind) {
+    case "until-end":
+      return `bytes ${request.offset}-${totalSize - 1}/${totalSize}`;
+    case "inclusive":
+      return `bytes ${request.offset}-${request.end}/${totalSize}`;
+    case "suffix":
+      return `bytes ${totalSize - request.suffix}-${
+        totalSize - 1
+      }/${totalSize}`;
+  }
+};
+
+const toContentLengthHeaderValue = (
+  request: PartialRangeRequest,
+  totalSize: number
+): string => {
+  switch (request.kind) {
+    case "until-end":
+      return (totalSize - request.offset).toString();
+    case "inclusive":
+      return request.length.toString();
+    case "suffix":
+      return request.suffix.toString();
+  }
+};
+
+const getResponseHeaders = ({
+  object,
+  rangeRequest,
+}: {
+  object: R2Object;
+  rangeRequest: RangeRequest;
+}): Headers => {
+  const responseHeaders = new Headers();
+
+  object.writeHttpMetadata(responseHeaders);
+  responseHeaders.set(Header.ETag, object.httpEtag);
+
+  for (const [header, value] of Object.entries(commonResponseHeaders)) {
+    responseHeaders.set(header, value);
+  }
+
+  if (rangeRequest.kind === "whole-document") {
+    responseHeaders.set(Header.ContentLength, object.size.toString());
+  } else {
+    responseHeaders.set(
+      Header.ContentLength,
+      toContentLengthHeaderValue(rangeRequest, object.size)
+    );
+    responseHeaders.set(
+      Header.ContentRange,
+      toContentRangeHeaderValue(rangeRequest, object.size)
+    );
+  }
+
+  return responseHeaders;
+};
+
+const toArtifactKey = (artifactSlug: string): string =>
+  `artifacts:v${artifactKeyVersion}:${artifactSlug}`;
+
+const getStorageKey = async ({
+  kv,
+  artifactSlug,
+  fileName,
+}: {
+  kv: KVNamespace;
+  artifactSlug: string;
+  fileName: string;
+}): Promise<string | undefined> => {
+  const artifactMetadata: ArtifactMetadata | null | undefined = await kv.get(
+    toArtifactKey(artifactSlug),
+    { type: "json" }
+  );
+
+  if (artifactMetadata === null || artifactMetadata === undefined) {
+    return undefined;
+  }
+
+  for (const fileMetadata of artifactMetadata.files) {
+    if (fileName === fileMetadata.fileName) return fileMetadata.storageKey;
+  }
+
+  return undefined;
+};
+
+const logHeaders = (headers: Headers): void => {
+  for (const [header, value] of headers.entries()) {
+    console.log(`  ${header}: ${value}`);
+  }
+};
+
+const hasObjectBody = (
+  object: R2Object | R2ObjectBody
+): object is R2ObjectBody => "body" in object;
+
 export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    ctx: ExecutionContext
-  ): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     console.log(`${request.method} ${request.url}`);
+
+    console.log("Request headers:");
+    logHeaders(request.headers);
 
     if (request.method !== "GET" && request.method !== "HEAD") {
       return Status.MethodNotAllowed(request);
@@ -146,13 +318,57 @@ export default {
 
     const urlResult = parseUrl(request);
     if (!urlResult.isValid) {
-      return urlResult.response;
+      return Status.NotFound(request);
     }
 
     const { artifactSlug, fileName } = urlResult;
 
-    return new Response(JSON.stringify({ artifactSlug, fileName }), {
-      status: 200,
+    console.log(`Artifact slug: ${artifactSlug}`);
+    console.log(`File name: ${fileName}`);
+
+    const rangeRequestResult = parseRangeRequest(request.headers);
+    if (!rangeRequestResult.isValid) {
+      return Status.RangeNotSatisfiable(rangeRequestResult.reason);
+    }
+
+    const { range: rangeRequest } = rangeRequestResult;
+
+    console.log(`Range request: ${rangeRequest}`);
+
+    const objectKey = await getStorageKey({
+      kv: env.ARTIFACTS_KV,
+      artifactSlug,
+      fileName,
     });
+
+    console.log(`Object key: ${objectKey}`);
+
+    if (objectKey === undefined) {
+      return Status.NotFound(request);
+    }
+
+    const object = await env.ARTIFACTS_R2.get(objectKey, {
+      onlyIf: request.headers,
+      range: toR2Range(rangeRequest),
+    });
+
+    if (object === null) return Status.NotFound(request);
+
+    console.log(`Object size: ${object.size}`);
+
+    const responseHeaders = getResponseHeaders({ object, rangeRequest });
+
+    console.log("Response headers:");
+    logHeaders(responseHeaders);
+
+    if (hasObjectBody(object)) {
+      if (rangeRequest.kind === "whole-document") {
+        return Status.Ok(object.body, responseHeaders);
+      } else {
+        return Status.PartialContent(object.body, responseHeaders);
+      }
+    } else {
+      return Status.NotModified(responseHeaders);
+    }
   },
 };
