@@ -16,6 +16,12 @@ const Status = {
       headers: { Allow: "GET, HEAD" },
     });
   },
+
+  RangeNotSatisfiable(reason: string): Response {
+    return new Response(`Invalid or unsupported range request: ${reason}`, {
+      status: 416,
+    });
+  },
 };
 
 type ParseUrlResult =
@@ -53,12 +59,74 @@ const parseUrl = (request: Request): ParseUrlResult => {
   };
 };
 
+type RangeRequest =
+  | { kind: "until-end"; offset: number }
+  | { kind: "inclusive"; offset: number; length: number }
+  | { kind: "suffix"; suffix: number }
+  | { kind: "whole-document" };
+
+type ParseRangeRequestResponse =
+  | { isValid: true; range: Readonly<RangeRequest> }
+  | { isValid: false; reason: string };
+
+function parseRangeRequest(encoded?: string): ParseRangeRequestResponse {
+  if (encoded === undefined || encoded.trim().length === 0) {
+    return {
+      isValid: true,
+      range: { kind: "whole-document" },
+    };
+  }
+
+  const [unit, encodedRanges] = encoded.split("=");
+
+  if (unit.trim() !== "bytes")
+    return {
+      isValid: false,
+      reason: "units other than `bytes` are not supported",
+    };
+
+  const encodedRangeList = encodedRanges.split(",");
+
+  if (encodedRangeList.length > 1) {
+    console.log(
+      "Client requested more than one range in the `Range` header. Only going to attempt to return the first."
+    );
+  }
+
+  const [rangeStart, rangeEnd] = encodedRangeList[0];
+
+  if (rangeStart.length === 0 && rangeEnd.length === 0) {
+    return { isValid: false, reason: "failed to parse request header" };
+  } else if (rangeStart.length === 0) {
+    return {
+      isValid: true,
+      range: { kind: "suffix", suffix: Number(rangeEnd) },
+    };
+  } else if (rangeEnd.length === 0) {
+    return {
+      isValid: true,
+      range: { kind: "until-end", offset: Number(rangeStart) },
+    };
+  } else {
+    return {
+      isValid: true,
+      range: {
+        kind: "inclusive",
+        offset: Number(rangeStart),
+        length: Number(rangeEnd) + 1 - Number(rangeStart),
+      },
+    };
+  }
+}
+
 export default {
   async fetch(
     request: Request,
     env: Env,
     ctx: ExecutionContext
   ): Promise<Response> {
+    console.log(`${request.method} ${request.url}`);
+
     if (request.method !== "GET" && request.method !== "HEAD") {
       return Status.MethodNotAllowed(request);
     }
