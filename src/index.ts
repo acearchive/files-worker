@@ -79,9 +79,11 @@ export type ParseRangeRequestResponse =
   | { isValid: false; reason: string };
 
 export const parseRangeRequest = (
-  encoded?: string
+  headers: Headers
 ): ParseRangeRequestResponse => {
-  if (encoded === undefined || encoded.trim().length === 0) {
+  const encoded = headers.get("Range");
+
+  if (encoded === null || encoded.trim().length === 0) {
     return {
       isValid: true,
       range: { kind: "whole-document" },
@@ -104,7 +106,7 @@ export const parseRangeRequest = (
     );
   }
 
-  const [rangeStart, rangeEnd] = encodedRangeList[0];
+  const [rangeStart, rangeEnd] = encodedRangeList[0].split("-");
 
   if (rangeStart.length === 0 && rangeEnd.length === 0) {
     return { isValid: false, reason: "failed to parse request header" };
