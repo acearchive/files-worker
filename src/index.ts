@@ -20,6 +20,7 @@ const Header = {
   Allow: "Allow",
   Range: "Range",
   ETag: "ETag",
+  LastModified: "Last-Modified",
   ContentLength: "Content-Length",
   ContentRange: "Content-Range",
   AcceptRanges: "Accept-Ranges",
@@ -235,6 +236,34 @@ const toContentLengthHeaderValue = (
   }
 };
 
+const toLastModifiedHeaderValue = (date: Date): string => {
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const weekDay = weekDays[date.getUTCDay()];
+  const day = date.getUTCDate().toString().padStart(2, "0");
+  const month = months[date.getUTCMonth()];
+  const year = date.getUTCFullYear();
+  const hour = date.getUTCHours().toString().padStart(2, "0");
+  const minute = date.getUTCMinutes().toString().padStart(2, "0");
+  const second = date.getUTCSeconds().toString().padStart(2, "0");
+
+  return `${weekDay}, ${day} ${month} ${year} ${hour}:${minute}:${second} GMT`;
+};
+
 const getResponseHeaders = ({
   object,
   rangeRequest,
@@ -245,7 +274,12 @@ const getResponseHeaders = ({
   const responseHeaders = new Headers();
 
   object.writeHttpMetadata(responseHeaders);
+
   responseHeaders.set(Header.ETag, object.httpEtag);
+  responseHeaders.set(
+    Header.LastModified,
+    toLastModifiedHeaderValue(object.uploaded)
+  );
 
   for (const [header, value] of Object.entries(commonResponseHeaders)) {
     responseHeaders.set(header, value);
