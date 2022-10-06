@@ -1,9 +1,12 @@
 {
-  "name": "acearchive-lgbt-files",
+  "name": "acearchive-files-worker",
   "version": "0.1.0",
   "private": true,
   "description": "Serverless functions for hosting files on Ace Archive",
-  "homepage": "https://github.com/acearchive/files-serverless#readme",
+  "homepage": "https://github.com/acearchive/files-worker#readme",
+  "bugs": {
+    "url": "https://github.com/acearchive/files-worker/issues"
+  },
   "scripts": {
     "format": "prettier --write '**/*.ts'",
     "lint": "eslint src/**/*.ts && prettier --check '**/*.ts'",
@@ -13,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/acearchive/files-serverless"
+    "url": "https://github.com/acearchive/files-worker"
   },
   "author": {
     "name": "Frawley",
