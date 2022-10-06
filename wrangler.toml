@@ -1,4 +1,4 @@
-name = "acearchive-lgbt-files"
+name = "acearchive-files"
 main = "./src/index.ts"
 compatibility_date = "2022-10-04"
 account_id = "9d143afa60e911e9904e835bd1db8504"
