@@ -69,7 +69,7 @@ const Status = {
     });
   },
 
-  Ok(body: ReadableStream, headers: Headers): Response {
+  Ok(body: ReadableStream | undefined, headers: Headers): Response {
     return new Response(body, {
       status: 200,
       headers,
@@ -279,7 +279,7 @@ const getResponseHeaders = ({
   rangeRequest,
 }: {
   object: R2Object;
-  rangeRequest: RangeRequest;
+  rangeRequest?: RangeRequest;
 }): Headers => {
   const responseHeaders = new Headers();
 
@@ -295,7 +295,7 @@ const getResponseHeaders = ({
     responseHeaders.set(header, value);
   }
 
-  if (rangeRequest.kind === "whole-document") {
+  if (rangeRequest === undefined || rangeRequest.kind === "whole-document") {
     responseHeaders.set(Header.ContentLength, object.size.toString());
   } else {
     responseHeaders.set(
@@ -341,10 +341,13 @@ const getStorageKey = async ({
   return undefined;
 };
 
-const headersToDebugRepr = (headers: Headers): string => {
-  return Array.from(headers.entries())
-    .map(([header, value]) => `  ${header}: ${value}`)
-    .join("\n");
+const headersToDebugRepr = (banner: string, headers: Headers): string => {
+  return (
+    `${banner}:\n` +
+    Array.from(headers.entries())
+      .map(([header, value]) => `  ${header}: ${value}`)
+      .join("\n")
+  );
 };
 
 const hasObjectBody = (
@@ -355,8 +358,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     console.log(`${request.method} ${request.url}`);
 
-    console.log("Request headers:");
-    console.log(headersToDebugRepr(request.headers));
+    console.log(headersToDebugRepr("Request headers", request.headers));
 
     if (request.method !== "GET" && request.method !== "HEAD") {
       return Status.MethodNotAllowed(request);
@@ -372,15 +374,6 @@ export default {
     console.log(`Artifact slug: ${artifactSlug}`);
     console.log(`File name: ${fileName}`);
 
-    const rangeRequestResult = parseRangeRequest(request.headers);
-    if (!rangeRequestResult.isValid) {
-      return Status.RangeNotSatisfiable(rangeRequestResult.reason);
-    }
-
-    const { range: rangeRequest } = rangeRequestResult;
-
-    console.log(`Range request: ${rangeRequest}`);
-
     const objectKey = await getStorageKey({
       kv: env.ARTIFACTS_KV,
       artifactSlug,
@@ -393,31 +386,56 @@ export default {
       return Status.NotFound(request);
     }
 
-    const object = await env.ARTIFACTS_R2.get(objectKey, {
-      onlyIf: request.headers,
-      range: toR2Range(rangeRequest),
-    });
-
-    if (object === null) {
-      console.log("Artifact file was not found in Cloudflare R2.");
-      return Status.NotFound(request);
-    }
-
-    console.log(`Object size: ${object.size}`);
-
-    const responseHeaders = getResponseHeaders({ object, rangeRequest });
-
-    console.log("Response headers:");
-    console.log(headersToDebugRepr(responseHeaders));
-
-    if (hasObjectBody(object)) {
-      if (rangeRequest.kind === "whole-document") {
-        return Status.Ok(object.body, responseHeaders);
-      } else {
-        return Status.PartialContent(object.body, responseHeaders);
+    if (request.method === "GET") {
+      const rangeRequestResult = parseRangeRequest(request.headers);
+      if (!rangeRequestResult.isValid) {
+        return Status.RangeNotSatisfiable(rangeRequestResult.reason);
       }
+
+      const { range: rangeRequest } = rangeRequestResult;
+
+      console.log(`Range request: ${JSON.stringify(rangeRequest)}`);
+
+      const object = await env.ARTIFACTS_R2.get(objectKey, {
+        onlyIf: request.headers,
+        range: toR2Range(rangeRequest),
+      });
+
+      if (object === null) {
+        console.log("Artifact file was not found in Cloudflare R2.");
+        return Status.NotFound(request);
+      }
+
+      console.log(`Object size: ${object.size}`);
+
+      const responseHeaders = getResponseHeaders({ object, rangeRequest });
+
+      console.log(headersToDebugRepr("Response headers", responseHeaders));
+
+      if (hasObjectBody(object)) {
+        if (rangeRequest.kind === "whole-document") {
+          return Status.Ok(object.body, responseHeaders);
+        } else {
+          return Status.PartialContent(object.body, responseHeaders);
+        }
+      } else {
+        return Status.NotModified(responseHeaders);
+      }
+    } else if (request.method === "HEAD") {
+      const object = await env.ARTIFACTS_R2.head(objectKey);
+
+      if (object === null) {
+        console.log("Artifact file was not found in Cloudflare R2.");
+        return Status.NotFound(request);
+      }
+
+      const responseHeaders = getResponseHeaders({ object });
+
+      console.log(headersToDebugRepr("Response headers", responseHeaders));
+
+      return Status.Ok(undefined, responseHeaders);
     } else {
-      return Status.NotModified(responseHeaders);
+      throw new Error("Error: This branch should be unreachable!");
     }
   },
 };
