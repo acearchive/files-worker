@@ -24,6 +24,8 @@ const Header = {
   ContentLength: "Content-Length",
   ContentRange: "Content-Range",
   AcceptRanges: "Accept-Ranges",
+  IfMatch: "If-Match",
+  IfNoneMatch: "If-None-Match",
 };
 
 const commonResponseHeaders: Readonly<Record<string, string>> = {
@@ -311,6 +313,35 @@ const getResponseHeaders = ({
   return responseHeaders;
 };
 
+const parseConditionalHeaders = (headers: Headers): Headers => {
+  // We need to match case-insensitively, because HTTP headers may not use
+  // canonicalized casing.
+  const etagHeaders = new Set(
+    [Header.IfMatch, Header.IfNoneMatch].map((header) => header.toLowerCase())
+  );
+
+  const newHeaders = new Headers();
+
+  // This is necessary because of a bug in the Workers runtime. This worker will
+  // only ever return strong etags, but clients may make conditional HTTP
+  // requests using weak etags, and currently R2 can't parse them.
+  //
+  // https://bytemeta.vip/repo/cloudflare/cloudflare-docs/issues/5469
+  for (const [header, value] of headers.entries()) {
+    if (etagHeaders.has(header.toLowerCase())) {
+      const newValue = value.replace("W/", "");
+      newHeaders.set(header, newValue);
+      console.log(
+        `Rewriting \`${header}: ${value}\` to \`${header}: ${newValue}\``
+      );
+    } else {
+      newHeaders.set(header, value);
+    }
+  }
+
+  return newHeaders;
+};
+
 const toArtifactKey = (artifactSlug: string): string =>
   `artifacts:v${artifactKeyVersion}:${artifactSlug}`;
 
@@ -397,7 +428,7 @@ export default {
       console.log(`Range request: ${JSON.stringify(rangeRequest)}`);
 
       const object = await env.ARTIFACTS_R2.get(objectKey, {
-        onlyIf: request.headers,
+        onlyIf: parseConditionalHeaders(request.headers),
         range: toR2Range(rangeRequest),
       });
 
