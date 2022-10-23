@@ -329,7 +329,7 @@ const parseConditionalHeaders = (headers: Headers): Headers => {
   // https://bytemeta.vip/repo/cloudflare/cloudflare-docs/issues/5469
   for (const [header, value] of headers.entries()) {
     if (etagHeaders.has(header.toLowerCase())) {
-      const newValue = value.replace("W/", "");
+      const newValue = value.replace(new RegExp(`^W/`), "");
       newHeaders.set(header, newValue);
       console.log(
         `Rewriting \`${header}: ${value}\` to \`${header}: ${newValue}\``
