@@ -366,6 +366,18 @@ const getStorageKey = async ({
 
   for (const fileMetadata of artifactMetadata.files) {
     if (fileName === fileMetadata.fileName) return fileMetadata.storageKey;
+
+    // We accept "pretty" URLs for HTML files which don't include the trailing
+    // `/index.html`. Check if a file with this name exists when it's
+    // de-prettified.
+    const uglifiedHtmlFileName = `${fileName}/index.html`;
+
+    if (uglifiedHtmlFileName === fileMetadata.fileName) {
+      console.log(
+        `Found HTML artifact file by de-prettifying file name: ${fileName}/index.html`
+      );
+      return fileMetadata.storageKey;
+    }
   }
 
   console.log("Artifact file was not found in artifact metadata.");
