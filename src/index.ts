@@ -26,10 +26,12 @@ const Header = {
   AcceptRanges: "Accept-Ranges",
   IfMatch: "If-Match",
   IfNoneMatch: "If-None-Match",
+  AccessControlAllowOrigin: "Access-Control-Allow-Origin",
 };
 
 const commonResponseHeaders: Readonly<Record<string, string>> = {
   [Header.AcceptRanges]: "bytes",
+  [Header.AccessControlAllowOrigin]: "*",
 };
 
 const Status = {
