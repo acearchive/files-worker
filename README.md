@@ -1,7 +1,5 @@
 # files-worker
 
-🚧 This repository is under construction. 🚧
-
 This repo is a [Cloudflare Worker](https://developers.cloudflare.com/workers/)
 that serves artifact files hosted on Ace Archive from [Cloudflare
 R2](https://developers.cloudflare.com/r2).
