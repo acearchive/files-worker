@@ -1,38 +1,18 @@
+import {
+  commonResponseHeaders,
+  getResponseHeaders,
+  Header,
+  headersToDebugRepr,
+  parseConditionalHeaders,
+} from "./headers";
+import { parseRangeRequest, toR2Range } from "./range";
+import { getStorageKey } from "./storage_key";
+import { parseUrl } from "./url";
+
 interface Env {
   ARTIFACTS_KV: KVNamespace;
   ARTIFACTS_R2: R2Bucket;
 }
-
-const artifactKeyVersion = 1;
-
-// These types are a subset of the JSON we store in Cloudflare KV, because we
-// only need the ability to get the S3 key for a given file name.
-type ArtifactFileMetadata = Readonly<{
-  fileName: string;
-  storageKey: string;
-}>;
-
-type ArtifactMetadata = Readonly<{
-  files: ReadonlyArray<ArtifactFileMetadata>;
-}>;
-
-const Header = {
-  Allow: "Allow",
-  Range: "Range",
-  ETag: "ETag",
-  LastModified: "Last-Modified",
-  ContentLength: "Content-Length",
-  ContentRange: "Content-Range",
-  AcceptRanges: "Accept-Ranges",
-  IfMatch: "If-Match",
-  IfNoneMatch: "If-None-Match",
-  AccessControlAllowOrigin: "Access-Control-Allow-Origin",
-};
-
-const commonResponseHeaders: Readonly<Record<string, string>> = {
-  [Header.AcceptRanges]: "bytes",
-  [Header.AccessControlAllowOrigin]: "*",
-};
 
 const Status = {
   NotFound(request: Request): Response {
@@ -81,320 +61,6 @@ const Status = {
   },
 };
 
-export type ParseUrlResult =
-  | { isValid: true; artifactSlug: string; fileName: string }
-  | { isValid: false };
-
-export const parseUrl = (request: Request): ParseUrlResult => {
-  const url = new URL(request.url);
-
-  // Remove the leading forward slash.
-  const urlPath = url.pathname.replace("/", "");
-
-  // Remove any trailing forward slash.
-  const pathComponents = url.pathname.endsWith("/")
-    ? urlPath.slice(0, -1).split("/")
-    : urlPath.split("/");
-
-  // Fail if there are any consecutive slashes in the URL.
-  if (pathComponents.some((component) => component.length === 0)) {
-    console.log("Request URL contained consecutive slashes.");
-    return { isValid: false };
-  }
-
-  if (pathComponents.length < 3) {
-    console.log(
-      "Request URL did not have enough path segments for a valid URL."
-    );
-    return { isValid: false };
-  }
-
-  // A file name can contain forward slashes.
-  const [namespace, artifactSlug, ...fileNameSegments] = pathComponents;
-
-  const fileName = fileNameSegments.join("/");
-
-  if (namespace !== "artifacts") {
-    console.log(
-      "Request URL included a path that did not start with `/artifacts/`"
-    );
-    return { isValid: false };
-  }
-
-  if (artifactSlug.length === 0 || fileName.length === 0) {
-    return { isValid: false };
-  }
-
-  return {
-    isValid: true,
-    artifactSlug,
-    fileName,
-  };
-};
-
-export type RangeRequest =
-  | { kind: "until-end"; offset: number }
-  | { kind: "inclusive"; offset: number; end: number; length: number }
-  | { kind: "suffix"; suffix: number }
-  | { kind: "whole-document" };
-
-type PartialRangeRequest = Exclude<RangeRequest, { kind: "whole-document" }>;
-
-export type ParseRangeRequestResponse =
-  | { isValid: true; range: Readonly<RangeRequest> }
-  | { isValid: false; reason: string };
-
-export const parseRangeRequest = (
-  headers: Headers
-): ParseRangeRequestResponse => {
-  const encoded = headers.get("Range");
-
-  if (encoded === null || encoded.trim().length === 0) {
-    return {
-      isValid: true,
-      range: { kind: "whole-document" },
-    };
-  }
-
-  const [unit, encodedRanges] = encoded.split("=");
-
-  if (unit.trim() !== "bytes") {
-    console.log("Request `Range` header included a unit other than `bytes`.");
-    return {
-      isValid: false,
-      reason: "units other than `bytes` are not supported",
-    };
-  }
-
-  const encodedRangeList = encodedRanges.split(",");
-
-  if (encodedRangeList.length > 1) {
-    console.log(
-      "Client requested more than one range in the `Range` header. Only going to attempt to return the first."
-    );
-  }
-
-  const [rangeStart, rangeEnd] = encodedRangeList[0].split("-");
-
-  if (rangeStart.length === 0 && rangeEnd.length === 0) {
-    console.log("Could not parse request `Range` header.");
-    return { isValid: false, reason: "failed to parse request header" };
-  } else if (rangeStart.length === 0) {
-    return {
-      isValid: true,
-      range: { kind: "suffix", suffix: Number(rangeEnd) },
-    };
-  } else if (rangeEnd.length === 0) {
-    return {
-      isValid: true,
-      range: { kind: "until-end", offset: Number(rangeStart) },
-    };
-  } else {
-    return {
-      isValid: true,
-      range: {
-        kind: "inclusive",
-        offset: Number(rangeStart),
-        end: Number(rangeEnd),
-        length: Number(rangeEnd) + 1 - Number(rangeStart),
-      },
-    };
-  }
-};
-
-const toR2Range = (request: RangeRequest): R2Range | undefined => {
-  switch (request.kind) {
-    case "until-end":
-      return { offset: request.offset };
-    case "inclusive":
-      return { offset: request.offset, length: request.length };
-    case "suffix":
-      return { suffix: request.suffix };
-    case "whole-document":
-      return undefined;
-  }
-};
-
-// This SO answer has some excellent examples for how HTTP range headers should
-// be formatted:
-//
-// https://stackoverflow.com/a/8507991
-
-const toContentRangeHeaderValue = (
-  request: PartialRangeRequest,
-  totalSize: number
-): string => {
-  switch (request.kind) {
-    case "until-end":
-      return `bytes ${request.offset}-${totalSize - 1}/${totalSize}`;
-    case "inclusive":
-      return `bytes ${request.offset}-${request.end}/${totalSize}`;
-    case "suffix":
-      return `bytes ${totalSize - request.suffix}-${
-        totalSize - 1
-      }/${totalSize}`;
-  }
-};
-
-const toContentLengthHeaderValue = (
-  request: PartialRangeRequest,
-  totalSize: number
-): string => {
-  switch (request.kind) {
-    case "until-end":
-      return (totalSize - request.offset).toString();
-    case "inclusive":
-      return request.length.toString();
-    case "suffix":
-      return request.suffix.toString();
-  }
-};
-
-const toLastModifiedHeaderValue = (date: Date): string => {
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-
-  const weekDay = weekDays[date.getUTCDay()];
-  const day = date.getUTCDate().toString().padStart(2, "0");
-  const month = months[date.getUTCMonth()];
-  const year = date.getUTCFullYear();
-  const hour = date.getUTCHours().toString().padStart(2, "0");
-  const minute = date.getUTCMinutes().toString().padStart(2, "0");
-  const second = date.getUTCSeconds().toString().padStart(2, "0");
-
-  return `${weekDay}, ${day} ${month} ${year} ${hour}:${minute}:${second} GMT`;
-};
-
-const getResponseHeaders = ({
-  object,
-  rangeRequest,
-}: {
-  object: R2Object;
-  rangeRequest?: RangeRequest;
-}): Headers => {
-  const responseHeaders = new Headers();
-
-  object.writeHttpMetadata(responseHeaders);
-
-  responseHeaders.set(Header.ETag, object.httpEtag);
-  responseHeaders.set(
-    Header.LastModified,
-    toLastModifiedHeaderValue(object.uploaded)
-  );
-
-  for (const [header, value] of Object.entries(commonResponseHeaders)) {
-    responseHeaders.set(header, value);
-  }
-
-  if (rangeRequest === undefined || rangeRequest.kind === "whole-document") {
-    responseHeaders.set(Header.ContentLength, object.size.toString());
-  } else {
-    responseHeaders.set(
-      Header.ContentLength,
-      toContentLengthHeaderValue(rangeRequest, object.size)
-    );
-    responseHeaders.set(
-      Header.ContentRange,
-      toContentRangeHeaderValue(rangeRequest, object.size)
-    );
-  }
-
-  return responseHeaders;
-};
-
-const parseConditionalHeaders = (headers: Headers): Headers => {
-  // We need to match case-insensitively, because HTTP headers may not use
-  // canonicalized casing.
-  const etagHeaders = new Set(
-    [Header.IfMatch, Header.IfNoneMatch].map((header) => header.toLowerCase())
-  );
-
-  const newHeaders = new Headers();
-
-  // This is necessary because of a bug in the Workers runtime. This worker will
-  // only ever return strong etags, but clients may make conditional HTTP
-  // requests using weak etags, and currently R2 can't parse them.
-  //
-  // https://bytemeta.vip/repo/cloudflare/cloudflare-docs/issues/5469
-  for (const [header, value] of headers.entries()) {
-    if (etagHeaders.has(header.toLowerCase())) {
-      const newValue = value.replace(new RegExp(`^W/`), "");
-      newHeaders.set(header, newValue);
-      console.log(
-        `Rewriting \`${header}: ${value}\` to \`${header}: ${newValue}\``
-      );
-    } else {
-      newHeaders.set(header, value);
-    }
-  }
-
-  return newHeaders;
-};
-
-const toArtifactKey = (artifactSlug: string): string =>
-  `artifacts:v${artifactKeyVersion}:${artifactSlug}`;
-
-const getStorageKey = async ({
-  kv,
-  artifactSlug,
-  fileName,
-}: {
-  kv: KVNamespace;
-  artifactSlug: string;
-  fileName: string;
-}): Promise<string | undefined> => {
-  const artifactMetadata: ArtifactMetadata | null | undefined = await kv.get(
-    toArtifactKey(artifactSlug),
-    { type: "json" }
-  );
-
-  if (artifactMetadata === null || artifactMetadata === undefined) {
-    console.log("Artifact metadata was not found in Cloudflare KV.");
-    return undefined;
-  }
-
-  for (const fileMetadata of artifactMetadata.files) {
-    if (fileName === fileMetadata.fileName) return fileMetadata.storageKey;
-
-    // We accept "pretty" URLs for HTML files which don't include the trailing
-    // `/index.html`. Check if a file with this name exists when it's
-    // de-prettified.
-    const uglifiedHtmlFileName = `${fileName}/index.html`;
-
-    if (uglifiedHtmlFileName === fileMetadata.fileName) {
-      console.log(
-        `Found HTML artifact file by de-prettifying file name: ${fileName}/index.html`
-      );
-      return fileMetadata.storageKey;
-    }
-  }
-
-  console.log("Artifact file was not found in artifact metadata.");
-  return undefined;
-};
-
-const headersToDebugRepr = (banner: string, headers: Headers): string => {
-  return (
-    `${banner}:\n` +
-    Array.from(headers.entries())
-      .map(([header, value]) => `  ${header}: ${value}`)
-      .join("\n")
-  );
-};
-
 const hasObjectBody = (
   object: R2Object | R2ObjectBody
 ): object is R2ObjectBody => "body" in object;
@@ -414,22 +80,30 @@ export default {
       return Status.NotFound(request);
     }
 
-    const { artifactSlug, fileName } = urlResult;
+    const { locator } = urlResult;
 
-    console.log(`Artifact slug: ${artifactSlug}`);
-    console.log(`File name: ${fileName}`);
+    console.log(`Artifact slug: ${locator.artifactSlug}`);
+    console.log(`File name: ${locator.fileName}`);
 
-    const objectKey = await getStorageKey({
+    const storageKeyResult = await getStorageKey({
       kv: env.ARTIFACTS_KV,
-      artifactSlug,
-      fileName,
+      locator,
     });
 
-    console.log(`Object key: ${objectKey}`);
-
-    if (objectKey === undefined) {
+    if (storageKeyResult.status === "not_found") {
       return Status.NotFound(request);
     }
+
+    if (storageKeyResult.status === "redirect") {
+      console.log(
+        `Redirecting from alias to canonical URL: ${storageKeyResult.url}`
+      );
+      return Response.redirect(storageKeyResult.url.toString(), 301);
+    }
+
+    const storageKey = storageKeyResult.storageKey;
+
+    console.log(`Artifact file object key: ${storageKey}`);
 
     if (request.method === "GET") {
       const rangeRequestResult = parseRangeRequest(request.headers);
@@ -441,7 +115,7 @@ export default {
 
       console.log(`Range request: ${JSON.stringify(rangeRequest)}`);
 
-      const object = await env.ARTIFACTS_R2.get(objectKey, {
+      const object = await env.ARTIFACTS_R2.get(storageKey, {
         onlyIf: parseConditionalHeaders(request.headers),
         range: toR2Range(rangeRequest),
       });
@@ -467,7 +141,7 @@ export default {
         return Status.NotModified(responseHeaders);
       }
     } else if (request.method === "HEAD") {
-      const object = await env.ARTIFACTS_R2.head(objectKey);
+      const object = await env.ARTIFACTS_R2.head(storageKey);
 
       if (object === null) {
         console.log("Artifact file was not found in Cloudflare R2.");
