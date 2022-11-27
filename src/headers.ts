@@ -3,6 +3,7 @@ import {
   RangeRequest,
   toContentRangeHeaderValue,
 } from "./range";
+import contentSecurityPolicy from "./csp";
 
 export const Header = {
   Allow: "Allow",
@@ -14,12 +15,35 @@ export const Header = {
   AcceptRanges: "Accept-Ranges",
   IfMatch: "If-Match",
   IfNoneMatch: "If-None-Match",
+  ContentTypeOptions: "X-Content-Type-Options",
+  ContentSecurityPolicy: "Content-Security-Policy",
+  ReferrerPolicy: "Referrer-Policy",
+  StrictTransportSecurity: "Strict-Transport-Security",
+  CacheControl: "Cache-Control",
   AccessControlAllowOrigin: "Access-Control-Allow-Origin",
+  PermissionsPolicy: "Permissions-Policy",
 } as const;
 
 export const commonResponseHeaders: Readonly<Record<string, string>> = {
   [Header.AcceptRanges]: "bytes",
+
+  [Header.ContentTypeOptions]: "nosniff",
+
+  [Header.ContentSecurityPolicy]: contentSecurityPolicy,
+
+  [Header.ReferrerPolicy]: "strict-origin",
+
+  [Header.StrictTransportSecurity]: `max-age=${
+    60 * 60 * 24 * 365
+  }; includeSubDomains; preload`,
+
+  [Header.CacheControl]: `public, max-age=${60 * 60 * 24 * 30}`,
+
   [Header.AccessControlAllowOrigin]: "*",
+
+  // Explicitly forbid highly sensitive permissions.
+  [Header.PermissionsPolicy]:
+    "camera=(), microphone=(), geolocation=(), display-capture=()",
 };
 
 const toLastModifiedHeaderValue = (date: Date): string => {
