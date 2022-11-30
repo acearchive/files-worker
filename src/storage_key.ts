@@ -1,8 +1,4 @@
-import {
-  ArtifactFileMetadata,
-  artifactKeyVersion,
-  ArtifactMetadata,
-} from "./model";
+import { ArtifactFileMetadata, KeyVersion, ArtifactMetadata } from "./model";
 import { ArtifactFileLocator } from "./url";
 
 export type StorageKeyResult =
@@ -64,8 +60,15 @@ const findStorageKeyInMetadata = ({
   return { status: "not_found" };
 };
 
-const toArtifactKey = (artifactSlug: string): string =>
-  `artifacts:v${artifactKeyVersion}:${artifactSlug}`;
+const toArtifactKey = (artifactId: string): string =>
+  `artifacts:v${KeyVersion.artifacts}:${artifactId}`;
+
+const toSlugKey = (artifactSlug: string): string =>
+  `slugs:v${KeyVersion.slugs}:${artifactSlug}`;
+
+type SlugMetadata = Readonly<{
+  id: string;
+}>;
 
 export const getStorageKey = async ({
   kv,
@@ -74,13 +77,24 @@ export const getStorageKey = async ({
   kv: KVNamespace;
   locator: ArtifactFileLocator;
 }): Promise<StorageKeyResult> => {
+  const { metadata: slugMetadata } = await kv.getWithMetadata<SlugMetadata>(
+    toSlugKey(locator.artifactSlug)
+  );
+
+  if (slugMetadata === null) {
+    console.log(`Artifact slug was not found in KV: ${locator.artifactSlug}`);
+    return { status: "not_found" };
+  }
+
+  const artifactId = slugMetadata.id;
+
   const artifactMetadata: ArtifactMetadata | null | undefined = await kv.get(
-    toArtifactKey(locator.artifactSlug),
+    toArtifactKey(artifactId),
     { type: "json" }
   );
 
   if (artifactMetadata === null || artifactMetadata === undefined) {
-    console.log("Artifact metadata was not found in Cloudflare KV.");
+    console.log(`Artifact could not be found in KV by its ID: ${artifactId}`);
     return { status: "not_found" };
   }
 
