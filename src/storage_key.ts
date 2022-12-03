@@ -21,6 +21,13 @@ const getRedirectUrl = ({
 }): URL =>
   new URL(`https://files.acearchive.lgbt/artifacts/${slug}/${fileName}`);
 
+const prettifyFileName = (fileName: string): string => {
+  const uglySuffix = "/index.html";
+  const prettyLen = fileName.length - uglySuffix.length;
+  const hasUglySuffix = fileName.substring(prettyLen) === uglySuffix;
+  return hasUglySuffix ? fileName.substring(0, prettyLen) + "/" : fileName;
+};
+
 const findStorageKeyInMetadata = ({
   locator,
   canonicalArtifactSlug,
@@ -30,17 +37,17 @@ const findStorageKeyInMetadata = ({
   canonicalArtifactSlug: ArtifactMetadata["slug"];
   fileMetadata: ArtifactFileMetadata;
 }): StorageKeyResult => {
-  if (locator.artifactSlug !== canonicalArtifactSlug) {
-    return {
-      status: "redirect",
-      url: getRedirectUrl({
-        slug: canonicalArtifactSlug,
-        fileName: fileMetadata.fileName,
-      }),
-    };
-  }
-
   if (locator.fileName === fileMetadata.fileName) {
+    if (locator.artifactSlug !== canonicalArtifactSlug) {
+      return {
+        status: "redirect",
+        url: getRedirectUrl({
+          slug: canonicalArtifactSlug,
+          fileName: prettifyFileName(fileMetadata.fileName),
+        }),
+      };
+    }
+
     return {
       status: "found",
       storageKey: fileMetadata.storageKey,
@@ -52,7 +59,7 @@ const findStorageKeyInMetadata = ({
       status: "redirect",
       url: getRedirectUrl({
         slug: canonicalArtifactSlug,
-        fileName: fileMetadata.fileName,
+        fileName: prettifyFileName(fileMetadata.fileName),
       }),
     };
   }
@@ -116,7 +123,7 @@ export const getStorageKey = async ({
 
     result = findStorageKeyInMetadata({
       locator: {
-        artifactSlug: artifactMetadata.slug,
+        artifactSlug: locator.artifactSlug,
         fileName: uglifiedHtmlFileName,
       },
       canonicalArtifactSlug: artifactMetadata.slug,
