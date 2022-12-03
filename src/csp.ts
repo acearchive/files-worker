@@ -16,6 +16,7 @@ const Directive = {
 const Src = {
   None: "'none'",
   Self: "'self'",
+  UnsafeInline: "'unsafe-inline'",
   Https: "https:",
   AceArchive: "https://acearchive.lgbt",
 } as const;
@@ -40,7 +41,7 @@ const csp: CSP = {
   [Directive.ScriptSrc]: [Src.None],
 
   // We host CSS on the main site for writing transcripts.
-  [Directive.StyleSrc]: [Src.Self, Src.AceArchive],
+  [Directive.StyleSrc]: [Src.Self, Src.UnsafeInline, Src.AceArchive],
 
   // HTML documents are expected to be self-contained and any assets they need
   // to reference (style sheets, images, etc.) are expected to be included in
