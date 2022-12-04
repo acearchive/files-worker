@@ -37,7 +37,7 @@ export const commonResponseHeaders: Readonly<Record<string, string>> = {
     60 * 60 * 24 * 365
   }; includeSubDomains; preload`,
 
-  [Header.CacheControl]: `public, max-age=${60 * 60 * 24}`,
+  [Header.CacheControl]: `public, max-age=${60 * 60 * 4}`,
 
   [Header.AccessControlAllowOrigin]: "*",
 
