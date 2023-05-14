@@ -22,6 +22,7 @@ export const Header = {
   CacheControl: "Cache-Control",
   AccessControlAllowOrigin: "Access-Control-Allow-Origin",
   PermissionsPolicy: "Permissions-Policy",
+  ContentType: "Content-Type",
 } as const;
 
 export const commonResponseHeaders: Readonly<Record<string, string>> = {

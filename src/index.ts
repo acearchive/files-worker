@@ -1,3 +1,4 @@
+import { Router, IRequest } from "itty-router";
 import {
   commonResponseHeaders,
   getResponseHeaders,
@@ -7,7 +8,7 @@ import {
 } from "./headers";
 import { parseRangeRequest, toR2Range } from "./range";
 import { getStorageKey } from "./storage_key";
-import { parseUrl } from "./url";
+import { validateUrl } from "./url";
 
 interface Env {
   ARTIFACTS_KV: KVNamespace;
@@ -15,15 +16,15 @@ interface Env {
 }
 
 const Status = {
-  NotFound(request: Request): Response {
-    return new Response(`File ${request.url} not found.`, {
+  NotFound({ url }: { url: string }): Response {
+    return new Response(`File ${url} not found.`, {
       status: 404,
       headers: commonResponseHeaders,
     });
   },
 
-  MethodNotAllowed(request: Request): Response {
-    return new Response(`Method ${request.method} not allowed.`, {
+  MethodNotAllowed({ method }: { method: string }): Response {
+    return new Response(`Method ${method} not allowed.`, {
       status: 405,
       headers: {
         [Header.Allow]: "GET, HEAD",
@@ -59,23 +60,38 @@ const Status = {
       headers,
     });
   },
+
+  InternalServerError(reason: string): Response {
+    return new Response(reason, {
+      status: 500,
+      headers: {
+        [Header.ContentType]: "text/plain",
+        ...commonResponseHeaders,
+      },
+    });
+  },
 };
 
 const hasObjectBody = (
   object: R2Object | R2ObjectBody
 ): object is R2ObjectBody => "body" in object;
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    console.log(`${request.method} ${request.url}`);
+const router = Router();
 
-    console.log(headersToDebugRepr("Request headers", request.headers));
+router.all(
+  "/artifacts/:artifactSlug/:fileName",
+  async (request: IRequest, env: Env) => {
+    const { params, method } = request;
 
-    if (request.method !== "GET" && request.method !== "HEAD") {
+    if (method !== "GET" && method !== "HEAD") {
       return Status.MethodNotAllowed(request);
     }
 
-    const urlResult = parseUrl(request);
+    const urlResult = validateUrl({
+      artifactSlug: params?.artifactSlug,
+      fileName: params?.fileName,
+    });
+
     if (!urlResult.isValid) {
       return Status.NotFound(request);
     }
@@ -156,5 +172,16 @@ export default {
     } else {
       throw new Error("Error: This branch should be unreachable!");
     }
+  }
+);
+
+router.all("*", ({ url }) => Status.NotFound({ url }));
+
+export default {
+  fetch: (request: Request, env: Env) => {
+    console.log(`${request.method} ${request.url}`);
+    console.log(headersToDebugRepr("Request headers", request.headers));
+
+    router.handle(request, env).catch(Status.InternalServerError);
   },
 };
