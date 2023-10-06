@@ -1,28 +1,21 @@
-export type ArtifactFileLocator = Readonly<{
-  // This can be the canonical slug or any slug alias.
-  slug: string;
-
-  // This can be the canonical filename or any filename alias.
-  filename: string;
-}>;
-
-export type FileMultihash = string;
-
-export interface ArtifactFileLocation {
-  multihash: FileMultihash;
-  canonicalSlug: string;
-  canonicalFilename: string;
-}
+import {
+  ArtifactFileLocation,
+  ArtifactFileLocator,
+  prettifyHtmlFilename,
+  FileMultihash,
+} from "./url";
 
 export const getFileLocation = async (
   db: D1Database,
   locator: ArtifactFileLocator
-): Promise<ArtifactFileLocation> => {
+): Promise<ArtifactFileLocation | undefined> => {
   interface Row {
     multihash: FileMultihash;
     slug: string;
     filename: string;
   }
+
+  console.log("Querying database");
 
   const row = await db
     .prepare(
@@ -63,11 +56,15 @@ export const getFileLocation = async (
     `
     )
     .bind(locator.slug, locator.filename)
-    .first<Row>();
+    .first<Row | null>();
+
+  if (row === null) {
+    return undefined;
+  }
 
   return {
     multihash: row.multihash,
     canonicalSlug: row.slug,
-    canonicalFilename: row.filename,
+    canonicalFilename: prettifyHtmlFilename(row.filename),
   };
 };

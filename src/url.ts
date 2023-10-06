@@ -1,7 +1,31 @@
+// Information used to locate an artifact file.
 export type ArtifactFileLocator = Readonly<{
-  artifactSlug: string;
-  fileName: string;
+  // This can be the canonical artifact slug or any slug alias.
+  slug: string;
+
+  // This can be the canonical filename or any filename alias.
+  filename: string;
 }>;
+
+export type FileMultihash = string;
+
+// The canonical location of an artifact file.
+export type ArtifactFileLocation = Readonly<{
+  multihash: FileMultihash;
+  canonicalSlug: string;
+  canonicalFilename: string;
+}>;
+
+export const urlFromLocation = (fileLocation: ArtifactFileLocation): URL => {
+  return new URL(
+    `https://files.acearchive.lgbt/artifacts/${fileLocation.canonicalSlug}/${fileLocation.canonicalFilename}`
+  );
+};
+
+// When a URL ends with `foo/index.html`, we prettify it to `foo/`.
+export const prettifyHtmlFilename = (url: string): string => {
+  return url.replace(new RegExp(`/index\\.html$`), "/");
+};
 
 export type ParseUrlResult =
   | { isValid: true; locator: ArtifactFileLocator }
@@ -32,9 +56,9 @@ export const parseUrl = (request: Request): ParseUrlResult => {
   }
 
   // A file name can contain forward slashes.
-  const [namespace, artifactSlug, ...fileNameSegments] = pathComponents;
+  const [namespace, artifactSlug, ...filenameSegments] = pathComponents;
 
-  const fileName = fileNameSegments.join("/");
+  const filename = filenameSegments.join("/");
 
   if (namespace !== "artifacts") {
     console.log(
@@ -43,15 +67,15 @@ export const parseUrl = (request: Request): ParseUrlResult => {
     return { isValid: false };
   }
 
-  if (artifactSlug.length === 0 || fileName.length === 0) {
+  if (artifactSlug.length === 0 || filename.length === 0) {
     return { isValid: false };
   }
 
   return {
     isValid: true,
     locator: {
-      artifactSlug,
-      fileName,
+      slug: artifactSlug,
+      filename,
     },
   };
 };
