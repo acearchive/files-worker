@@ -28,9 +28,11 @@ export const getFileLocation = async (
         artifacts
       JOIN
         artifact_versions ON artifact_versions.artifact = artifacts.id
+      LEFT JOIN
+        artifact_aliases ON artifact_aliases.artifact = artifacts.id
       JOIN
         files ON files.artifact = artifacts.id
-      JOIN
+      LEFT JOIN
         file_aliases ON file_aliases.file = files.id
       JOIN
         (
@@ -43,7 +45,7 @@ export const getFileLocation = async (
             artifact_id
         ) AS latest_artifacts
         ON latest_artifacts.artifact_id = artifact_versions.artifact_id
-        AND latest_artifacts.version = artifact_versions.versions
+        AND latest_artifacts.version = artifact_versions.version
       WHERE
         (
           artifacts.slug = ?1
