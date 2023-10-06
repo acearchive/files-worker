@@ -75,13 +75,13 @@ export const parseUrl = (request: Request): ParseUrlResult => {
 
   // Fail if there are any consecutive slashes in the URL.
   if (pathComponents.some((component) => component.length === 0)) {
-    console.log("Request URL contained consecutive slashes.");
+    console.log("Request URL contained consecutive slashes");
     return { isValid: false };
   }
 
   if (pathComponents.length < 3) {
     console.log(
-      "Request URL did not have enough path segments for a valid URL."
+      "Request URL did not have enough path segments for a valid URL"
     );
     return { isValid: false };
   }

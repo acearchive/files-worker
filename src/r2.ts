@@ -41,7 +41,7 @@ export const getArtifactFile = async ({
     });
 
     if (object === null) {
-      console.log("Artifact file was not found in Cloudflare R2.");
+      console.log("Artifact file was not found in Cloudflare R2");
       return status.NotFound(request);
     }
 
@@ -64,7 +64,7 @@ export const getArtifactFile = async ({
     const object = await bucket.head(objectKey);
 
     if (object === null) {
-      console.log("Artifact file was not found in Cloudflare R2.");
+      console.log("Artifact file was not found in Cloudflare R2");
       return status.NotFound(request);
     }
 

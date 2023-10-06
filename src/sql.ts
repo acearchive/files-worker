@@ -1,7 +1,6 @@
 import {
   ArtifactFileLocation,
   ArtifactFileLocator,
-  prettifyFilename,
   FileMultihash,
   uglifyFilename,
 } from "./url";

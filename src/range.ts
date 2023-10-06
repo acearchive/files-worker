@@ -28,7 +28,7 @@ export const parseRangeRequest = (
   const [unit, encodedRanges] = encoded.split("=");
 
   if (unit.trim() !== "bytes") {
-    console.log("Request `Range` header included a unit other than `bytes`.");
+    console.log("Request `Range` header included a unit other than `bytes`");
     return {
       isValid: false,
       reason: "units other than `bytes` are not supported",
@@ -39,14 +39,14 @@ export const parseRangeRequest = (
 
   if (encodedRangeList.length > 1) {
     console.log(
-      "Client requested more than one range in the `Range` header. Only going to attempt to return the first."
+      "Client requested more than one range in the `Range` header, only going to attempt to return the first"
     );
   }
 
   const [rangeStart, rangeEnd] = encodedRangeList[0].split("-");
 
   if (rangeStart.length === 0 && rangeEnd.length === 0) {
-    console.log("Could not parse request `Range` header.");
+    console.log("Could not parse request `Range` header");
     return { isValid: false, reason: "failed to parse request header" };
   } else if (rangeStart.length === 0) {
     return {
