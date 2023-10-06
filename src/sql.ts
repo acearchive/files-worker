@@ -58,18 +58,13 @@ export const getFileLocation = async (
     `
   );
 
-  // While performing this query twice is somewhat wasteful, the query will only
-  // execute twice for HTML files.
-
-  let row = await stmt
-    .bind(locator.slug, prettifyFilename(locator.filename))
+  // Filenames will only ever be stored "uglified," because
+  // artifact-submit-action validates that filenames must contain a file
+  // extension, so filenames in the database will always contain a file
+  // extension.
+  const row = await stmt
+    .bind(locator.slug, uglifyFilename(locator.filename))
     .first<Row | null>();
-
-  if (row === null) {
-    row = await stmt
-      .bind(locator.slug, uglifyFilename(locator.filename))
-      .first<Row | null>();
-  }
 
   if (row === null) {
     return undefined;
