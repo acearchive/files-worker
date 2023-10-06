@@ -4,21 +4,20 @@ compatibility_date = "2022-10-04"
 account_id = "9d143afa60e911e9904e835bd1db8504"
 usage_model = "bundled"
 
-[env.prod]
+[route]
+pattern = "files.acearchive.lgbt"
+custom_domain = true
 
-  [env.prod.route]
-  pattern = "files.acearchive.lgbt"
-  custom_domain = true
+[[d1_databases]]
+binding = "DB"
+database_name = "acearchive-artifacts"
+database_id = "ffd316de-0455-429b-90c7-45f935183333"
+preview_database_id = "078c47dc-e6ae-4edf-89b3-db5a6bb1b4d6"
 
-  [[env.prod.d1_databases]]
-  binding = "DB"
-  database_name = "acearchive-artifacts"
-  database_id = "ffd316de-0455-429b-90c7-45f935183333"
-
-  [[env.prod.r2_buckets]]
-  binding = "ARTIFACTS_R2"
-  bucket_name = "acearchive-lgbt-artifacts"
-  preview_bucket_name = "acearchive-lgbt-artifacts"
+[[r2_buckets]]
+binding = "ARTIFACTS_R2"
+bucket_name = "acearchive-lgbt-artifacts"
+preview_bucket_name = "acearchive-lgbt-artifacts-dev"
 
 [env.dev]
 
@@ -34,4 +33,3 @@ usage_model = "bundled"
   [[env.dev.r2_buckets]]
   binding = "ARTIFACTS_R2"
   bucket_name = "acearchive-lgbt-artifacts-dev"
-  preview_bucket_name = "acearchive-lgbt-artifacts-dev"
