@@ -1,8 +1,9 @@
 import {
   ArtifactFileLocation,
   ArtifactFileLocator,
-  prettifyHtmlFilename,
+  prettifyFilename,
   FileMultihash,
+  uglifyFilename,
 } from "./url";
 
 export const getFileLocation = async (
@@ -17,9 +18,8 @@ export const getFileLocation = async (
 
   console.log("Querying database");
 
-  const row = await db
-    .prepare(
-      `
+  const stmt = db.prepare(
+    `
       SELECT
         files.multihash,
         artifacts.slug,
@@ -56,9 +56,20 @@ export const getFileLocation = async (
         )
       LIMIT 1
     `
-    )
-    .bind(locator.slug, locator.filename)
+  );
+
+  // While performing this query twice is somewhat wasteful, the query will only
+  // execute twice for HTML files.
+
+  let row = await stmt
+    .bind(locator.slug, prettifyFilename(locator.filename))
     .first<Row | null>();
+
+  if (row === null) {
+    row = await stmt
+      .bind(locator.slug, uglifyFilename(locator.filename))
+      .first<Row | null>();
+  }
 
   if (row === null) {
     return undefined;
@@ -67,6 +78,6 @@ export const getFileLocation = async (
   return {
     multihash: row.multihash,
     canonicalSlug: row.slug,
-    canonicalFilename: prettifyHtmlFilename(row.filename),
+    canonicalFilename: row.filename,
   };
 };

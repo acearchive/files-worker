@@ -2,7 +2,12 @@ import { headersToDebugRepr } from "./headers";
 import { getArtifactFile, getR2ObjectKey } from "./r2";
 import { getFileLocation } from "./sql";
 import status from "./status";
-import { parseUrl, urlFromLocation } from "./url";
+import {
+  filenameIsPrettified,
+  filenamesAreEquivalent,
+  parseUrl,
+  urlFromLocation,
+} from "./url";
 
 interface Env {
   ARTIFACTS_R2: R2Bucket;
@@ -37,7 +42,11 @@ export default {
 
     if (
       fileLocation.canonicalSlug !== locator.slug ||
-      fileLocation.canonicalFilename !== locator.filename
+      !filenamesAreEquivalent(
+        fileLocation.canonicalFilename,
+        locator.filename
+      ) ||
+      !filenameIsPrettified(locator.filename)
     ) {
       const redirectUrl = urlFromLocation(fileLocation);
 
