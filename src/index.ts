@@ -12,6 +12,7 @@ import { parseUrl } from "./url";
 interface Env {
   ARTIFACTS_KV: KVNamespace;
   ARTIFACTS_R2: R2Bucket;
+  DB: D1Database;
 }
 
 const Status = {
