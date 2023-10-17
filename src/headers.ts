@@ -11,6 +11,7 @@ export const Header = {
   ETag: "ETag",
   LastModified: "Last-Modified",
   ContentLength: "Content-Length",
+  ContentType: "Content-Type",
   ContentRange: "Content-Range",
   AcceptRanges: "Accept-Ranges",
   IfMatch: "If-Match",

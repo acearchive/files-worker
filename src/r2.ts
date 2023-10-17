@@ -1,11 +1,17 @@
 import { parseRangeRequest, toR2Range } from "./range";
 import { FileMultihash } from "./url";
-import status from "./status";
 import {
   getResponseHeaders,
   headersToDebugRepr,
   parseConditionalHeaders,
 } from "./headers";
+import {
+  NotFound,
+  NotModified,
+  Ok,
+  PartialContent,
+  RangeNotSatisfiable,
+} from "./status";
 
 export type R2ObjectKey = string;
 
@@ -28,7 +34,7 @@ export const getArtifactFile = async ({
   if (request.method === "GET") {
     const rangeRequestResult = parseRangeRequest(request.headers);
     if (!rangeRequestResult.isValid) {
-      return status.RangeNotSatisfiable(rangeRequestResult.reason);
+      throw RangeNotSatisfiable(rangeRequestResult.reason);
     }
 
     const { range: rangeRequest } = rangeRequestResult;
@@ -42,7 +48,7 @@ export const getArtifactFile = async ({
 
     if (object === null) {
       console.log("Artifact file was not found in Cloudflare R2");
-      return status.NotFound(request);
+      throw NotFound(request);
     }
 
     console.log(`Object size: ${object.size}`);
@@ -53,26 +59,26 @@ export const getArtifactFile = async ({
 
     if (hasObjectBody(object)) {
       if (rangeRequest.kind === "whole-document") {
-        return status.Ok(object.body, responseHeaders);
+        return Ok(object.body, responseHeaders);
       } else {
-        return status.PartialContent(object.body, responseHeaders);
+        return PartialContent(object.body, responseHeaders);
       }
     } else {
-      return status.NotModified(responseHeaders);
+      return NotModified(responseHeaders);
     }
   } else if (request.method === "HEAD") {
     const object = await bucket.head(objectKey);
 
     if (object === null) {
       console.log("Artifact file was not found in Cloudflare R2");
-      return status.NotFound(request);
+      throw NotFound(request);
     }
 
     const responseHeaders = getResponseHeaders({ object });
 
     console.log(headersToDebugRepr("Response headers", responseHeaders));
 
-    return status.Ok(undefined, responseHeaders);
+    return Ok(undefined, responseHeaders);
   } else {
     throw new Error("Error: This branch should be unreachable!");
   }
