@@ -25,3 +25,10 @@ the file first.
 
 HTTP range requests and conditional requests are supported, and `ETag` and
 `Last-Modified` headers are returned for caching.
+
+R2 [bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
+are used to ensure that files written to R2 cannot be overwritten or deleted.
+However, the Cloudflare [Terraform
+provider](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs)
+does not seem to support this API as of time of writing, so this step was taken
+manually.
