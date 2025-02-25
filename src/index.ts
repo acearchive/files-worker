@@ -73,6 +73,10 @@ const main = async (request: Request, env: Env): Promise<Response> => {
       err instanceof ResponseError &&
       err.status === 404
     ) {
+      console.log(
+        "Artifact not found in primary bucket. Checking secondary bucket."
+      );
+
       return await getArtifactFile({
         bucket: env.SECONDARY_BUCKET,
         multihash: fileLocation.multihash,
