@@ -29,7 +29,9 @@ compatibility_date = "2022-10-04"
   binding = "DB"
   database_name = "acearchive-artifacts-dev"
   database_id = "12b24516-946d-4ebd-abbb-8db821159924"
+  preview_database_id = "12b24516-946d-4ebd-abbb-8db821159924"
 
   [[env.dev.r2_buckets]]
   binding = "ARTIFACTS_R2"
   bucket_name = "acearchive-lgbt-artifacts-dev"
+  preview_bucket_name = "acearchive-lgbt-artifacts-dev"
