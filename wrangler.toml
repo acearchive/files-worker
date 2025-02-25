@@ -15,7 +15,7 @@ compatibility_date = "2022-10-04"
   preview_database_id = "12b24516-946d-4ebd-abbb-8db821159924"
 
   [[env.prod.r2_buckets]]
-  binding = "ARTIFACTS_R2"
+  binding = "PRIMARY_BUCKET"
   bucket_name = "acearchive-lgbt-artifacts"
   preview_bucket_name = "acearchive-lgbt-artifacts-dev"
 
@@ -32,6 +32,15 @@ compatibility_date = "2022-10-04"
   preview_database_id = "12b24516-946d-4ebd-abbb-8db821159924"
 
   [[env.dev.r2_buckets]]
-  binding = "ARTIFACTS_R2"
+  binding = "PRIMARY_BUCKET"
   bucket_name = "acearchive-lgbt-artifacts-dev"
   preview_bucket_name = "acearchive-lgbt-artifacts-dev"
+
+  # In the dev environment, if an artifact isn't found in the dev bucket, we
+  # search for it in the prod bucket instead. This saves us from having to
+  # needlessly backpopulate the dev bucket when objects from submitted artifacts
+  # are added to the prod bucket.
+  [[env.dev.r2_buckets]]
+  binding = "SECONDARY_BUCKET"
+  bucket_name = "acearchive-lgbt-artifacts"
+  preview_bucket_name = "acearchive-lgbt-artifacts"

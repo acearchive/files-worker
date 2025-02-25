@@ -15,7 +15,8 @@ import {
 } from "./url";
 
 interface Env {
-  ARTIFACTS_R2: R2Bucket;
+  PRIMARY_BUCKET: R2Bucket;
+  SECONDARY_BUCKET: R2Bucket | undefined;
   DB: D1Database;
 }
 
@@ -60,11 +61,29 @@ const main = async (request: Request, env: Env): Promise<Response> => {
 
   console.log(`Artifact file object key: ${objectKey}`);
 
-  return await getArtifactFile({
-    bucket: env.ARTIFACTS_R2,
-    objectKey,
-    request,
-  });
+  try {
+    return await getArtifactFile({
+      bucket: env.PRIMARY_BUCKET,
+      objectKey,
+      request,
+    });
+  } catch (err) {
+    // If the artifact wasn't found in the primary bucket, check the secondary
+    // bucket, if one has been configured for this environment.
+    if (
+      env.SECONDARY_BUCKET &&
+      err instanceof ResponseError &&
+      err.status === 404
+    ) {
+      return await getArtifactFile({
+        bucket: env.SECONDARY_BUCKET,
+        objectKey,
+        request,
+      });
+    } else {
+      throw err;
+    }
+  }
 };
 
 export default {
