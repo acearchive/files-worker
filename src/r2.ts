@@ -24,13 +24,15 @@ const hasObjectBody = (
 
 export const getArtifactFile = async ({
   bucket,
-  objectKey,
+  multihash,
   request,
 }: {
   bucket: R2Bucket;
-  objectKey: R2ObjectKey;
+  multihash: FileMultihash;
   request: Request;
 }): Promise<Response> => {
+  const objectKey = getR2ObjectKey(multihash);
+
   if (request.method === "GET") {
     const rangeRequestResult = parseRangeRequest(request.headers);
     if (!rangeRequestResult.isValid) {
@@ -53,7 +55,11 @@ export const getArtifactFile = async ({
 
     console.log(`Object size: ${object.size}`);
 
-    const responseHeaders = getResponseHeaders({ object, rangeRequest });
+    const responseHeaders = getResponseHeaders({
+      object,
+      rangeRequest,
+      multihash,
+    });
 
     console.log(headersToDebugRepr("Response headers", responseHeaders));
 
@@ -74,7 +80,7 @@ export const getArtifactFile = async ({
       throw NotFound(request);
     }
 
-    const responseHeaders = getResponseHeaders({ object });
+    const responseHeaders = getResponseHeaders({ object, multihash });
 
     console.log(headersToDebugRepr("Response headers", responseHeaders));
 

@@ -4,11 +4,14 @@ import {
   toContentRangeHeaderValue,
 } from "./range";
 import contentSecurityPolicy from "./csp";
+import { decodeMultihash, hashAlgorithmToReprDigestName } from "./multihash";
+import { base64 } from "rfc4648";
 
 export const Header = {
   Allow: "Allow",
   Range: "Range",
   ETag: "ETag",
+  ReprDigest: "Repr-Digest",
   LastModified: "Last-Modified",
   ContentLength: "Content-Length",
   ContentType: "Content-Type",
@@ -75,6 +78,12 @@ const toLastModifiedHeaderValue = (date: Date): string => {
   return `${weekDay}, ${day} ${month} ${year} ${hour}:${minute}:${second} GMT`;
 };
 
+const toReprDigestHeaderValue = (multihash: string): string => {
+  const { hash, hashAlgorithm } = decodeMultihash(multihash);
+  const reprDigestName = hashAlgorithmToReprDigestName(hashAlgorithm);
+  return `${reprDigestName}=:${base64.stringify(hash)}:`;
+};
+
 const toContentLengthHeaderValue = (
   request: PartialRangeRequest,
   totalSize: number
@@ -92,9 +101,11 @@ const toContentLengthHeaderValue = (
 export const getResponseHeaders = ({
   object,
   rangeRequest,
+  multihash,
 }: {
   object: R2Object;
   rangeRequest?: RangeRequest;
+  multihash: string;
 }): Headers => {
   const responseHeaders = new Headers();
 
@@ -122,6 +133,8 @@ export const getResponseHeaders = ({
       toContentRangeHeaderValue(rangeRequest, object.size)
     );
   }
+
+  responseHeaders.set(Header.ReprDigest, toReprDigestHeaderValue(multihash));
 
   return responseHeaders;
 };

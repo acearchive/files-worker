@@ -1,5 +1,5 @@
 import { headersToDebugRepr } from "./headers";
-import { getArtifactFile, getR2ObjectKey } from "./r2";
+import { getArtifactFile } from "./r2";
 import { getFileLocation } from "./sql";
 import {
   MethodNotAllowed,
@@ -57,14 +57,12 @@ const main = async (request: Request, env: Env): Promise<Response> => {
     return Response.redirect(redirectUrl.toString(), 301);
   }
 
-  const objectKey = getR2ObjectKey(fileLocation.multihash);
-
-  console.log(`Artifact file object key: ${objectKey}`);
+  console.log(`Artifact file multihash key: ${fileLocation.multihash}`);
 
   try {
     return await getArtifactFile({
       bucket: env.PRIMARY_BUCKET,
-      objectKey,
+      multihash: fileLocation.multihash,
       request,
     });
   } catch (err) {
@@ -77,7 +75,7 @@ const main = async (request: Request, env: Env): Promise<Response> => {
     ) {
       return await getArtifactFile({
         bucket: env.SECONDARY_BUCKET,
-        objectKey,
+        multihash: fileLocation.multihash,
         request,
       });
     } else {
