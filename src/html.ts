@@ -63,14 +63,23 @@ export const imagePageTemplate = ({
 
 export const filePathStyles = `
   body {
+    margin: 0;
     display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+    justify-content: center;
+    background-color: #212121;
+  }
+
+  img {
+    display: block;
+    height: 100vh;
+    width: auto;
+    object-fit: none;
   }
 
   footer {
+    position: absolute;
+    bottom: 0;
     display: flex;
     gap: 1rem;
-    margin-top: auto;
   }
 `;
