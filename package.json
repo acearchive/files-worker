@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "handlebars": "^4.7.8",
+    "itty-router": "^5.0.18",
     "multiformats": "^13.3.2",
     "rfc4648": "^1.5.4"
   }

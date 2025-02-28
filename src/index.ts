@@ -1,3 +1,4 @@
+import { Router } from "itty-router";
 import { headersToDebugRepr } from "./headers";
 import { getArtifactFile } from "./r2";
 import { getFileLocation } from "./sql";
@@ -10,7 +11,6 @@ import {
 import {
   filenameIsPrettified,
   filenamesAreEquivalent,
-  parseUrl,
   urlFromLocation,
 } from "./url";
 
@@ -20,86 +20,88 @@ interface Env {
   DB: D1Database;
 }
 
-const main = async (request: Request, env: Env): Promise<Response> => {
-  console.log(`${request.method} ${request.url}`);
+const router = Router()
+  .all("/artifacts/:slug/:filename", async (request, env: Env) => {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      throw MethodNotAllowed(request.method, ["GET", "HEAD"]);
+    }
 
-  console.log(headersToDebugRepr("Request headers", request.headers));
+    console.log(headersToDebugRepr("Request headers", request.headers));
 
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    throw MethodNotAllowed(request.method, ["GET", "HEAD"]);
-  }
+    const locator = {
+      slug: request.params.slug,
+      filename: request.params.filename,
+    };
 
-  const urlResult = parseUrl(request);
-  if (!urlResult.isValid) {
-    throw NotFound(request);
-  }
+    console.log(`Artifact slug: ${locator.slug}`);
+    console.log(`File name: ${locator.filename}`);
 
-  const { locator } = urlResult;
+    const fileLocation = await getFileLocation(env.DB, locator);
 
-  console.log(`Artifact slug: ${locator.slug}`);
-  console.log(`File name: ${locator.filename}`);
+    if (fileLocation === undefined) {
+      throw NotFound(request);
+    }
 
-  const fileLocation = await getFileLocation(env.DB, locator);
-
-  if (fileLocation === undefined) {
-    throw NotFound(request);
-  }
-
-  if (
-    fileLocation.canonicalSlug !== locator.slug ||
-    !filenamesAreEquivalent(fileLocation.canonicalFilename, locator.filename) ||
-    !filenameIsPrettified(locator.filename)
-  ) {
-    const redirectUrl = urlFromLocation(fileLocation);
-
-    console.log(`Redirecting from alias to canonical URL: ${redirectUrl}`);
-
-    return Response.redirect(redirectUrl.toString(), 301);
-  }
-
-  console.log(`Artifact file multihash key: ${fileLocation.multihash}`);
-
-  try {
-    return await getArtifactFile({
-      bucket: env.PRIMARY_BUCKET,
-      multihash: fileLocation.multihash,
-      request,
-    });
-  } catch (err) {
-    // If the artifact wasn't found in the primary bucket, check the secondary
-    // bucket, if one has been configured for this environment.
     if (
-      env.SECONDARY_BUCKET &&
-      err instanceof ResponseError &&
-      err.status === 404
+      fileLocation.canonicalSlug !== locator.slug ||
+      !filenamesAreEquivalent(
+        fileLocation.canonicalFilename,
+        locator.filename
+      ) ||
+      !filenameIsPrettified(locator.filename)
     ) {
-      console.log(
-        "Artifact not found in primary bucket. Checking secondary bucket."
-      );
+      const redirectUrl = urlFromLocation(fileLocation);
 
+      console.log(`Redirecting from alias to canonical URL: ${redirectUrl}`);
+
+      return Response.redirect(redirectUrl.toString(), 301);
+    }
+
+    console.log(`Artifact file multihash key: ${fileLocation.multihash}`);
+
+    try {
       return await getArtifactFile({
-        bucket: env.SECONDARY_BUCKET,
+        bucket: env.PRIMARY_BUCKET,
         multihash: fileLocation.multihash,
         request,
       });
-    } else {
-      throw err;
+    } catch (err) {
+      // If the artifact wasn't found in the primary bucket, check the secondary
+      // bucket, if one has been configured for this environment.
+      if (
+        env.SECONDARY_BUCKET &&
+        err instanceof ResponseError &&
+        err.status === 404
+      ) {
+        console.log(
+          "Artifact not found in primary bucket. Checking secondary bucket."
+        );
+
+        return await getArtifactFile({
+          bucket: env.SECONDARY_BUCKET,
+          multihash: fileLocation.multihash,
+          request,
+        });
+      } else {
+        throw err;
+      }
     }
-  }
-};
+  })
+  .all("*", async (request) => {
+    throw NotFound(request);
+  });
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    try {
-      return await main(request, env);
-    } catch (err) {
+  fetch: (request: Request, env: Env) =>
+    router.fetch(request, env).catch(async (err: unknown) => {
       if (err instanceof ResponseError) {
+        console.log(err.message);
         return err.response();
       } else if (err instanceof Error) {
+        console.log(err.message);
         return UnexpectedError(err.message).response();
       } else {
         return UnexpectedError("Unexpected error.").response();
       }
-    }
-  },
+    }),
 };
