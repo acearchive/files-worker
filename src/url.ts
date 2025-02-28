@@ -18,33 +18,25 @@ export type ArtifactFileMetadata = Readonly<{
 }>;
 
 export const artifactPageUrlFromMetadata = (
-  baseUrl: string,
+  archiveBaseUrl: string,
   fileMetadata: ArtifactFileMetadata
 ): URL => {
-  return new URL(`${baseUrl}/artifacts/${fileMetadata.canonicalSlug}}`);
+  return new URL(`${archiveBaseUrl}/artifacts/${fileMetadata.canonicalSlug}`);
 };
 
-export const artifactFileUrlFromMetadata = (
-  baseUrl: string,
+export const filePageUrlPathFromMetadata = (
   fileMetadata: ArtifactFileMetadata
-): URL => {
-  return new URL(
-    `${baseUrl}/artifacts/${fileMetadata.canonicalSlug}/${prettifyFilename(
-      fileMetadata.canonicalFilename
-    )}`
-  );
-};
+): string =>
+  `/artifacts/${fileMetadata.canonicalSlug}/${prettifyFilename(
+    fileMetadata.canonicalFilename
+  )}`;
 
-export const rawUrlFromMetadata = (
-  baseUrl: string,
+export const rawFileUrlPathFromMetadata = (
   fileMetadata: ArtifactFileMetadata
-): URL => {
-  return new URL(
-    `${baseUrl}/raw/${fileMetadata.canonicalSlug}/${prettifyFilename(
-      fileMetadata.canonicalFilename
-    )}`
-  );
-};
+): string =>
+  `/raw/${fileMetadata.canonicalSlug}/${prettifyFilename(
+    fileMetadata.canonicalFilename
+  )}`;
 
 // When a filename ends with `foo/index.html`, we prettify it to `foo/`.
 export const prettifyFilename = (filename: string): string => {
@@ -67,15 +59,20 @@ export const uglifyFilename = (filename: string): string => {
   return filename + "/index.html";
 };
 
-export const filenameIsPrettified = (filename: string): boolean => {
+const filenameIsPrettified = (filename: string): boolean => {
   return prettifyFilename(filename) === filename;
 };
 
 // Returns whether two filenames are equivalent without regard for whether
 // they're prettified or not.
-export const filenamesAreEquivalent = (
-  first: string,
-  second: string
-): boolean => {
+const filenamesAreEquivalent = (first: string, second: string): boolean => {
   return uglifyFilename(first) === uglifyFilename(second);
 };
+
+export const locatorIsCanonical = (
+  locator: ArtifactFileLocator,
+  metadata: ArtifactFileMetadata
+): boolean =>
+  metadata.canonicalSlug === locator.slug &&
+  filenamesAreEquivalent(metadata.canonicalFilename, locator.filename) &&
+  filenameIsPrettified(locator.filename);

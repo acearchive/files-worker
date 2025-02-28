@@ -10,51 +10,19 @@ import {
   UnexpectedError,
 } from "./status";
 import {
-  ArtifactFileMetadata,
-  ArtifactFileLocator,
-  filenameIsPrettified,
-  filenamesAreEquivalent,
-  artifactFileUrlFromMetadata,
-  rawUrlFromMetadata,
+  filePageUrlPathFromMetadata,
+  rawFileUrlPathFromMetadata,
   artifactPageUrlFromMetadata,
+  locatorIsCanonical,
 } from "./url";
-// import artifactTemplate from "./assets/artifact.html";
-import Handlebars from "handlebars";
+import { imagePageTemplate } from "./html";
 
 interface Env {
   PRIMARY_BUCKET: R2Bucket;
   SECONDARY_BUCKET: R2Bucket | undefined;
   DB: D1Database;
   ARCHIVE_URL: string;
-  BASE_URL: string;
 }
-
-const redirectToCanonical = (
-  kind: "artifact" | "raw",
-  baseUrl: string,
-  metadata: ArtifactFileMetadata,
-  locator: ArtifactFileLocator
-): Response | undefined => {
-  if (
-    metadata.canonicalSlug !== locator.slug ||
-    !filenamesAreEquivalent(metadata.canonicalFilename, locator.filename) ||
-    !filenameIsPrettified(locator.filename)
-  ) {
-    let redirectUrl;
-
-    if (kind === "artifact") {
-      redirectUrl = artifactFileUrlFromMetadata(baseUrl, metadata);
-    } else {
-      redirectUrl = rawUrlFromMetadata(baseUrl, metadata);
-    }
-
-    console.log(`Redirecting from alias to canonical URL: ${redirectUrl}`);
-
-    return Response.redirect(redirectUrl.toString(), 301);
-  }
-
-  return undefined;
-};
 
 const router = Router()
   .all("/raw/:slug/:filename", async (request, env: Env) => {
@@ -78,14 +46,11 @@ const router = Router()
       throw NotFound(request);
     }
 
-    const maybeRedirect = redirectToCanonical(
-      "raw",
-      env.BASE_URL,
-      metadata,
-      locator
-    );
-    if (maybeRedirect !== undefined) {
-      return maybeRedirect;
+    if (!locatorIsCanonical(locator, metadata)) {
+      return Response.redirect(
+        rawFileUrlPathFromMetadata(metadata).toString(),
+        301
+      );
     }
 
     console.log(`Artifact file multihash key: ${metadata.multihash}`);
@@ -139,23 +104,19 @@ const router = Router()
       throw NotFound(request);
     }
 
-    const maybeRedirect = redirectToCanonical(
-      "artifact",
-      env.BASE_URL,
-      metadata,
-      locator
-    );
-    if (maybeRedirect !== undefined) {
-      return maybeRedirect;
+    if (!locatorIsCanonical(locator, metadata)) {
+      return Response.redirect(
+        filePageUrlPathFromMetadata(metadata).toString(),
+        301
+      );
     }
 
-    const template = Handlebars.compile("");
-
-    const htmlDocument = template({
+    const htmlDocument = imagePageTemplate({
       title: metadata.canonicalFilename,
-      icon: "https://acearchive.lgbt/images/favicon-64x64.png",
-      file_src: rawUrlFromMetadata(env.BASE_URL, metadata),
-      artifact_link: artifactPageUrlFromMetadata(env.ARCHIVE_URL, metadata),
+      iconPath: "https://acearchive.lgbt/images/favicon-64x64.png",
+      rawFileUrl: rawFileUrlPathFromMetadata(metadata),
+      artifactPageUrl: artifactPageUrlFromMetadata(env.ARCHIVE_URL, metadata)
+        .href,
     });
 
     const responseHeaders = new Headers();
