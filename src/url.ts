@@ -9,18 +9,40 @@ export type ArtifactFileLocator = Readonly<{
 
 export type FileMultihash = string;
 
-// The canonical location of an artifact file.
-export type ArtifactFileLocation = Readonly<{
+// Metadata about an artifact file.
+export type ArtifactFileMetadata = Readonly<{
   multihash: FileMultihash;
   canonicalSlug: string;
   canonicalFilename: string;
+  mediaType: string;
 }>;
 
-export const urlFromLocation = (fileLocation: ArtifactFileLocation): URL => {
+export const artifactPageUrlFromMetadata = (
+  baseUrl: string,
+  fileMetadata: ArtifactFileMetadata
+): URL => {
+  return new URL(`${baseUrl}/artifacts/${fileMetadata.canonicalSlug}}`);
+};
+
+export const artifactFileUrlFromMetadata = (
+  baseUrl: string,
+  fileMetadata: ArtifactFileMetadata
+): URL => {
   return new URL(
-    `https://files.acearchive.lgbt/artifacts/${
-      fileLocation.canonicalSlug
-    }/${prettifyFilename(fileLocation.canonicalFilename)}`
+    `${baseUrl}/artifacts/${fileMetadata.canonicalSlug}/${prettifyFilename(
+      fileMetadata.canonicalFilename
+    )}`
+  );
+};
+
+export const rawUrlFromMetadata = (
+  baseUrl: string,
+  fileMetadata: ArtifactFileMetadata
+): URL => {
+  return new URL(
+    `${baseUrl}/raw/${fileMetadata.canonicalSlug}/${prettifyFilename(
+      fileMetadata.canonicalFilename
+    )}`
   );
 };
 

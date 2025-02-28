@@ -1,18 +1,19 @@
 import {
-  ArtifactFileLocation,
+  ArtifactFileMetadata,
   ArtifactFileLocator,
   FileMultihash,
   uglifyFilename,
 } from "./url";
 
-export const getFileLocation = async (
+export const getFileMetadata = async (
   db: D1Database,
   locator: ArtifactFileLocator
-): Promise<ArtifactFileLocation | undefined> => {
+): Promise<ArtifactFileMetadata | undefined> => {
   interface Row {
-    multihash: FileMultihash;
     slug: string;
     filename: string;
+    multihash: FileMultihash;
+    media_type: string;
   }
 
   console.log("Querying database");
@@ -20,9 +21,10 @@ export const getFileLocation = async (
   const stmt = db.prepare(
     `
       SELECT
-        files.multihash,
         artifacts.slug,
-        files.filename
+        files.filename,
+        files.multihash,
+        files.media_type
       FROM
         artifacts
       JOIN
@@ -61,5 +63,6 @@ export const getFileLocation = async (
     multihash: row.multihash,
     canonicalSlug: row.slug,
     canonicalFilename: row.filename,
+    mediaType: row.media_type,
   };
 };

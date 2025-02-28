@@ -75,7 +75,7 @@ export const PartialContent = (
   });
 
 export const Ok = (
-  body: ReadableStream | undefined,
+  body: ReadableStream | string | undefined,
   headers: Headers
 ): Response =>
   new Response(body, {

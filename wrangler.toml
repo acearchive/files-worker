@@ -2,11 +2,20 @@ name = "acearchive-files"
 main = "./src/index.ts"
 compatibility_date = "2022-10-04"
 
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
 [env.prod]
 
   [env.prod.route]
   pattern = "files.acearchive.lgbt"
   custom_domain = true
+
+  [env.prod.vars]
+  ARCHIVE_URL = "https://acearchive.lgbt"
+  BASE_URL = "https://files.acearchive.lgbt"
 
   [[env.prod.d1_databases]]
   binding = "DB"
@@ -24,6 +33,10 @@ compatibility_date = "2022-10-04"
   [env.dev.route]
   pattern = "files-dev.acearchive.lgbt"
   custom_domain = true
+
+  [env.dev.vars]
+  ARCHIVE_URL = "https://dev.acearchive.lgbt"
+  BASE_URL = "https://files-dev.acearchive.lgbt"
 
   [[env.dev.d1_databases]]
   binding = "DB"
