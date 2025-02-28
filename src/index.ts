@@ -1,5 +1,5 @@
 import { Router } from "itty-router";
-import { commonResponseHeaders, Header, headersToDebugRepr } from "./headers";
+import { getCommonResponseHeaders, Header } from "./headers";
 import { getArtifactFile } from "./r2";
 import { getFileMetadata } from "./sql";
 import {
@@ -14,14 +14,15 @@ import {
   rawFileUrlPathFromMetadata,
   artifactPageUrlFromMetadata,
   locatorIsCanonical,
+  faviconUrl,
 } from "./url";
-import { imagePageTemplate } from "./html";
+import { imagePageTemplate, filePathStyles } from "./html";
 
 interface Env {
   PRIMARY_BUCKET: R2Bucket;
   SECONDARY_BUCKET: R2Bucket | undefined;
   DB: D1Database;
-  ARCHIVE_URL: string;
+  ARCHIVE_DOMAIN: string;
 }
 
 const router = Router()
@@ -30,15 +31,10 @@ const router = Router()
       throw MethodNotAllowed(request.method, ["GET", "HEAD"]);
     }
 
-    console.log(headersToDebugRepr("Request headers", request.headers));
-
     const locator = {
       slug: request.params.slug,
       filename: request.params.filename,
     };
-
-    console.log(`Artifact slug: ${locator.slug}`);
-    console.log(`File name: ${locator.filename}`);
 
     const metadata = await getFileMetadata(env.DB, locator);
 
@@ -52,8 +48,6 @@ const router = Router()
         301
       );
     }
-
-    console.log(`Artifact file multihash key: ${metadata.multihash}`);
 
     try {
       return await getArtifactFile({
@@ -88,15 +82,10 @@ const router = Router()
       throw MethodNotAllowed(request.method, ["GET", "HEAD"]);
     }
 
-    console.log(headersToDebugRepr("Request headers", request.headers));
-
     const locator = {
       slug: request.params.slug,
       filename: request.params.filename,
     };
-
-    console.log(`Artifact slug: ${locator.slug}`);
-    console.log(`File name: ${locator.filename}`);
 
     const metadata = await getFileMetadata(env.DB, locator);
 
@@ -113,24 +102,26 @@ const router = Router()
 
     const htmlDocument = imagePageTemplate({
       title: metadata.canonicalFilename,
-      iconPath: "https://acearchive.lgbt/images/favicon-64x64.png",
+      iconPath: faviconUrl(env.ARCHIVE_DOMAIN),
       rawFileUrl: rawFileUrlPathFromMetadata(metadata),
-      artifactPageUrl: artifactPageUrlFromMetadata(env.ARCHIVE_URL, metadata)
+      artifactPageUrl: artifactPageUrlFromMetadata(env.ARCHIVE_DOMAIN, metadata)
         .href,
     });
 
-    const responseHeaders = new Headers();
+    const responseHeaders = getCommonResponseHeaders(env.ARCHIVE_DOMAIN);
     responseHeaders.set(Header.ContentType, "text/html");
-
-    for (const [header, value] of Object.entries(commonResponseHeaders)) {
-      responseHeaders.set(header, value);
-    }
 
     if (request.method === "GET") {
       return Ok(htmlDocument, responseHeaders);
     } else {
       return Ok(undefined, responseHeaders);
     }
+  })
+  .get("/assets/style.css", async (_request, env) => {
+    const responseHeaders = getCommonResponseHeaders(env.ARCHIVE_DOMAIN);
+    responseHeaders.set(Header.ContentType, "text/css");
+
+    return Ok(filePathStyles, responseHeaders);
   })
   .all("*", async (request) => {
     throw NotFound(request);

@@ -19,6 +19,7 @@ const baseFilePageTemplate = ({
   rawFileUrl: string;
   unsafeEmbed: string;
 }) => `
+  <!DOCTYPE html>
   <html>
     <head>
       <meta charset="UTF-8" />
@@ -59,3 +60,17 @@ export const imagePageTemplate = ({
       <img src="${encodeURI(rawFileUrl)}" />
     `,
   });
+
+export const filePathStyles = `
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  footer {
+    display: flex;
+    gap: 1rem;
+    margin-top: auto;
+  }
+`;

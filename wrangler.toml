@@ -14,7 +14,7 @@ fallthrough = true
   custom_domain = true
 
   [env.prod.vars]
-  ARCHIVE_URL = "https://acearchive.lgbt"
+  ARCHIVE_DOMAIN = "acearchive.lgbt"
 
   [[env.prod.d1_databases]]
   binding = "DB"
@@ -34,7 +34,7 @@ fallthrough = true
   custom_domain = true
 
   [env.dev.vars]
-  ARCHIVE_URL = "https://dev.acearchive.lgbt"
+  ARCHIVE_DOMAIN = "dev.acearchive.lgbt"
 
   [[env.dev.d1_databases]]
   binding = "DB"
