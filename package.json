@@ -41,6 +41,7 @@
     "wrangler": "^3.28.1"
   },
   "dependencies": {
+    "handlebars": "^4.7.8",
     "multiformats": "^13.3.2",
     "rfc4648": "^1.5.4"
   }
