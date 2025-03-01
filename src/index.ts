@@ -1,5 +1,5 @@
 import { Router } from "itty-router";
-import { getCommonResponseHeaders, Header } from "./headers";
+import { getCommonResponseHeaders, Header, prefersHtmlOver } from "./headers";
 import { getArtifactFileWithFallback } from "./r2";
 import { getFileMetadata } from "./sql";
 import {
@@ -78,17 +78,27 @@ const router = Router()
       );
     }
 
-    const htmlDocument = filePage({
-      mediaType: metadata.mediaType,
-      title: metadata.canonicalFilename,
-      rawFileUrl: rawFileUrlPathFromMetadata(metadata),
-      artifactPageUrl: artifactPageUrlFromMetadata(env.ARCHIVE_DOMAIN, metadata)
-        .href,
-    });
+    const acceptHeader = request.headers.get(Header.Accept);
+    const prefersHtml = acceptHeader
+      ? prefersHtmlOver(acceptHeader, metadata.mediaType)
+      : false;
+
+    const htmlDocument = prefersHtml
+      ? filePage({
+          mediaType: metadata.mediaType,
+          title: metadata.canonicalFilename,
+          rawFileUrl: rawFileUrlPathFromMetadata(metadata),
+          artifactPageUrl: artifactPageUrlFromMetadata(
+            env.ARCHIVE_DOMAIN,
+            metadata
+          ).href,
+        })
+      : undefined;
 
     if (htmlDocument !== undefined) {
       const responseHeaders = getCommonResponseHeaders();
       responseHeaders.set(Header.ContentType, "text/html");
+      responseHeaders.set(Header.Vary, Header.Accept);
 
       if (request.method === "GET") {
         return Ok(htmlDocument, responseHeaders);
@@ -96,12 +106,16 @@ const router = Router()
         return Ok(undefined, responseHeaders);
       }
     } else {
-      return await getArtifactFileWithFallback({
+      const response = await getArtifactFileWithFallback({
         primaryBucket: env.PRIMARY_BUCKET,
         secondaryBucket: env.SECONDARY_BUCKET,
         multihash: metadata.multihash,
         request,
       });
+
+      response.headers.set(Header.Vary, Header.Accept);
+
+      return response;
     }
   })
   .get("/assets/style.css", async () => {

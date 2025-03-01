@@ -26,6 +26,8 @@ export const Header = {
   CacheControl: "Cache-Control",
   AccessControlAllowOrigin: "Access-Control-Allow-Origin",
   PermissionsPolicy: "Permissions-Policy",
+  Vary: "Vary",
+  Accept: "Accept",
 } as const;
 
 export const commonResponseHeaderMap: Readonly<Record<string, string>> = {
@@ -184,4 +186,34 @@ export const headersToDebugRepr = (
       .map(([header, value]) => `  ${header}: ${value}`)
       .join("\n")
   );
+};
+
+const parseAcceptHeader = (header: string): string[] => {
+  const mediaTypesWithWeights = header
+    .split(",")
+    .map((mediaType) => mediaType.trim());
+
+  const mediaTypesByWeight = new Map(
+    mediaTypesWithWeights.map((mediaTypeWithWeight) => {
+      const [mediaType, weight] = mediaTypeWithWeight.split(";q=");
+      return [mediaType, weight === undefined ? "1" : weight];
+    })
+  );
+
+  return Array.from(mediaTypesByWeight.keys()).sort(
+    (a, b) =>
+      Number(mediaTypesByWeight.get(b)) - Number(mediaTypesByWeight.get(a))
+  );
+};
+
+export const prefersHtmlOver = (
+  acceptHeader: string,
+  otherMediaType: string
+) => {
+  const mediaTypes = parseAcceptHeader(acceptHeader);
+  const htmlIndex = mediaTypes.indexOf("text/html");
+  const otherIndex = mediaTypes.indexOf(otherMediaType);
+  const hasHtmlButNotOther = htmlIndex !== -1 && otherIndex === -1;
+
+  return hasHtmlButNotOther || htmlIndex < otherIndex;
 };
