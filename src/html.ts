@@ -111,6 +111,26 @@ const pdfFilePage = ({
     `,
   });
 
+const htmlFilePage = ({
+  title,
+  artifactPageUrl,
+  rawFileUrl,
+}: {
+  title: string;
+  artifactPageUrl: string;
+  rawFileUrl: string;
+}) =>
+  baseFilePageTemplate({
+    title,
+    artifactPageUrl,
+    rawFileUrl,
+    unsafeEmbed: `
+      <iframe src="${encodeURI(
+        rawFileUrl
+      )}" width="100%" height="100%"></iframe>
+    `,
+  });
+
 export const filePage = ({
   mediaType,
   title,
@@ -122,7 +142,9 @@ export const filePage = ({
   artifactPageUrl: string;
   rawFileUrl: string;
 }) => {
-  if (mediaType.startsWith("image/")) {
+  if (mediaType === "text/html") {
+    return htmlFilePage({ title, artifactPageUrl, rawFileUrl });
+  } else if (mediaType.startsWith("image/")) {
     return imageFilePage({ title, artifactPageUrl, rawFileUrl });
   } else if (mediaType.startsWith("video/")) {
     return videoFilePage({ title, artifactPageUrl, rawFileUrl, mediaType });

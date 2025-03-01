@@ -82,6 +82,8 @@ const router = Router()
     const prefersHtml = acceptHeader
       ? prefersHtmlOver(acceptHeader, metadata.mediaType)
       : false;
+    console.log(`acceptHeader: ${acceptHeader}`);
+    console.log(`prefersHtml: ${prefersHtml}`);
 
     const htmlDocument = prefersHtml
       ? filePage({

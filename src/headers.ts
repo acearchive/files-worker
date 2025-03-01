@@ -211,6 +211,10 @@ export const prefersHtmlOver = (
   acceptHeader: string,
   otherMediaType: string
 ) => {
+  if (otherMediaType === "text/html") {
+    return true;
+  }
+
   const mediaTypes = parseAcceptHeader(acceptHeader);
   const htmlIndex = mediaTypes.indexOf("text/html");
   const otherIndex = mediaTypes.indexOf(otherMediaType);

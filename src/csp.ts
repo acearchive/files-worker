@@ -63,7 +63,7 @@ const csp: CSP = {
 
   [Directive.ObjectSrc]: [Src.Self],
 
-  [Directive.FrameSrc]: [Src.None],
+  [Directive.FrameSrc]: [Src.Self],
 
   [Directive.FormAction]: [Src.None],
 
