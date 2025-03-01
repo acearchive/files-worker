@@ -85,6 +85,7 @@ const pdfFilePage = ({
       <object data="${encodeURI(
         rawFileUrl
       )}" type="application/pdf" width="100%" height="100%">
+      </object>
     `,
   });
 
@@ -136,9 +137,6 @@ export const filePageStyles = `
     justify-content: center;
     height: 100vh;
     width: 100vw;
-    padding: 5rem;
-    max-height: calc(100vh - 10rem);
-    max-width: calc(100vw - 10rem);
   }
 
   a {
@@ -181,5 +179,9 @@ export const filePageStyles = `
     bottom: 1rem;
     display: flex;
     gap: 1rem;
+    border-radius: 1rem;
+    background-color: #212121;
+    padding: 0.8rem;
+    filter: drop-shadow(2px 2px 2px black);
   }
 `;
