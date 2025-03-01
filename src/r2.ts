@@ -11,6 +11,7 @@ import {
   Ok,
   PartialContent,
   RangeNotSatisfiable,
+  ResponseError,
 } from "./status";
 
 export type R2ObjectKey = string;
@@ -87,5 +88,41 @@ export const getArtifactFile = async ({
     return Ok(undefined, responseHeaders);
   } else {
     throw new Error("Error: This branch should be unreachable!");
+  }
+};
+
+export const getArtifactFileWithFallback = async ({
+  primaryBucket,
+  secondaryBucket,
+  multihash,
+  request,
+}: {
+  primaryBucket: R2Bucket;
+  secondaryBucket?: R2Bucket;
+  multihash: FileMultihash;
+  request: Request;
+}): Promise<Response> => {
+  try {
+    return await getArtifactFile({
+      bucket: primaryBucket,
+      multihash: multihash,
+      request,
+    });
+  } catch (err) {
+    // If the artifact wasn't found in the primary bucket, check the secondary
+    // bucket, if one has been configured for this environment.
+    if (secondaryBucket && err instanceof ResponseError && err.status === 404) {
+      console.log(
+        "Artifact not found in primary bucket. Checking secondary bucket."
+      );
+
+      return await getArtifactFile({
+        bucket: secondaryBucket,
+        multihash: multihash,
+        request,
+      });
+    } else {
+      throw err;
+    }
   }
 };

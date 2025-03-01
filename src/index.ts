@@ -1,6 +1,6 @@
 import { Router } from "itty-router";
 import { getCommonResponseHeaders, Header } from "./headers";
-import { getArtifactFile } from "./r2";
+import { getArtifactFileWithFallback } from "./r2";
 import { getFileMetadata } from "./sql";
 import {
   MethodNotAllowed,
@@ -15,7 +15,7 @@ import {
   artifactPageUrlFromMetadata,
   locatorIsCanonical,
 } from "./url";
-import { imagePageTemplate, filePathStyles } from "./html";
+import { filePageStyles, filePage } from "./html";
 
 interface Env {
   PRIMARY_BUCKET: R2Bucket;
@@ -48,33 +48,12 @@ const router = Router()
       );
     }
 
-    try {
-      return await getArtifactFile({
-        bucket: env.PRIMARY_BUCKET,
-        multihash: metadata.multihash,
-        request,
-      });
-    } catch (err) {
-      // If the artifact wasn't found in the primary bucket, check the secondary
-      // bucket, if one has been configured for this environment.
-      if (
-        env.SECONDARY_BUCKET &&
-        err instanceof ResponseError &&
-        err.status === 404
-      ) {
-        console.log(
-          "Artifact not found in primary bucket. Checking secondary bucket."
-        );
-
-        return await getArtifactFile({
-          bucket: env.SECONDARY_BUCKET,
-          multihash: metadata.multihash,
-          request,
-        });
-      } else {
-        throw err;
-      }
-    }
+    return await getArtifactFileWithFallback({
+      primaryBucket: env.PRIMARY_BUCKET,
+      secondaryBucket: env.SECONDARY_BUCKET,
+      multihash: metadata.multihash,
+      request,
+    });
   })
   .all("/artifacts/:slug/:filename", async (request, env) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -99,27 +78,37 @@ const router = Router()
       );
     }
 
-    const htmlDocument = imagePageTemplate({
+    const htmlDocument = filePage({
+      mediaType: metadata.mediaType,
       title: metadata.canonicalFilename,
       rawFileUrl: rawFileUrlPathFromMetadata(metadata),
       artifactPageUrl: artifactPageUrlFromMetadata(env.ARCHIVE_DOMAIN, metadata)
         .href,
     });
 
-    const responseHeaders = getCommonResponseHeaders();
-    responseHeaders.set(Header.ContentType, "text/html");
+    if (htmlDocument !== undefined) {
+      const responseHeaders = getCommonResponseHeaders();
+      responseHeaders.set(Header.ContentType, "text/html");
 
-    if (request.method === "GET") {
-      return Ok(htmlDocument, responseHeaders);
+      if (request.method === "GET") {
+        return Ok(htmlDocument, responseHeaders);
+      } else {
+        return Ok(undefined, responseHeaders);
+      }
     } else {
-      return Ok(undefined, responseHeaders);
+      return await getArtifactFileWithFallback({
+        primaryBucket: env.PRIMARY_BUCKET,
+        secondaryBucket: env.SECONDARY_BUCKET,
+        multihash: metadata.multihash,
+        request,
+      });
     }
   })
   .get("/assets/style.css", async () => {
     const responseHeaders = getCommonResponseHeaders();
     responseHeaders.set(Header.ContentType, "text/css");
 
-    return Ok(filePathStyles, responseHeaders);
+    return Ok(filePageStyles, responseHeaders);
   })
   .all("*", async (request) => {
     throw NotFound(request);

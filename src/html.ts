@@ -50,7 +50,7 @@ const baseFilePageTemplate = ({
   </html>
 `;
 
-export const imagePageTemplate = ({
+const imageFilePage = ({
   title,
   artifactPageUrl,
   rawFileUrl,
@@ -68,9 +68,27 @@ export const imagePageTemplate = ({
     `,
   });
 
+export const filePage = ({
+  mediaType,
+  title,
+  artifactPageUrl,
+  rawFileUrl,
+}: {
+  mediaType: string;
+  title: string;
+  artifactPageUrl: string;
+  rawFileUrl: string;
+}) => {
+  if (mediaType.startsWith("image/")) {
+    return imageFilePage({ title, artifactPageUrl, rawFileUrl });
+  } else {
+    return undefined;
+  }
+};
+
 // The colors in this stylesheet are taken from the static site and should be
 // kept in sync with it.
-export const filePathStyles = `
+export const filePageStyles = `
   @font-face {
     font-family: "Fira Sans";
     font-style: normal;
