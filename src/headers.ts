@@ -216,9 +216,20 @@ export const prefersHtmlOver = (
   }
 
   const mediaTypes = parseAcceptHeader(acceptHeader);
-  const htmlIndex = mediaTypes.indexOf("text/html");
-  const otherIndex = mediaTypes.indexOf(otherMediaType);
-  const hasHtmlButNotOther = htmlIndex !== -1 && otherIndex === -1;
 
-  return hasHtmlButNotOther || htmlIndex < otherIndex;
+  const htmlIndex = mediaTypes.indexOf("text/html");
+  const hasHtml = htmlIndex !== -1;
+
+  const otherIndex = mediaTypes.indexOf(otherMediaType);
+  const hasOther = otherIndex !== -1;
+
+  if (!hasHtml) {
+    return false;
+  }
+
+  if (hasHtml && !hasOther) {
+    return true;
+  }
+
+  return htmlIndex < otherIndex;
 };
