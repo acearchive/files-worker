@@ -68,6 +68,26 @@ const imageFilePage = ({
     `,
   });
 
+const pdfFilePage = ({
+  title,
+  artifactPageUrl,
+  rawFileUrl,
+}: {
+  title: string;
+  artifactPageUrl: string;
+  rawFileUrl: string;
+}) =>
+  baseFilePageTemplate({
+    title,
+    artifactPageUrl,
+    rawFileUrl,
+    unsafeEmbed: `
+      <object data="${encodeURI(
+        rawFileUrl
+      )}" type="application/pdf" width="100%" height="100%">
+    `,
+  });
+
 export const filePage = ({
   mediaType,
   title,
@@ -81,6 +101,8 @@ export const filePage = ({
 }) => {
   if (mediaType.startsWith("image/")) {
     return imageFilePage({ title, artifactPageUrl, rawFileUrl });
+  } else if (mediaType === "application/pdf") {
+    return pdfFilePage({ title, artifactPageUrl, rawFileUrl });
   } else {
     return undefined;
   }

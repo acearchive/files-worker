@@ -14,6 +14,7 @@ const Directive = {
   ImgSrc: "img-src",
   FontSrc: "font-src",
   MediaSrc: "media-src",
+  ObjectSrc: "object-src",
   FrameSrc: "frame-src",
   FormAction: "form-action",
   FrameAncestors: "frame-ancestors",
@@ -60,6 +61,8 @@ const csp: CSP = {
 
   [Directive.MediaSrc]: [Src.Self],
 
+  [Directive.ObjectSrc]: [Src.Self],
+
   [Directive.FrameSrc]: [Src.None],
 
   [Directive.FormAction]: [Src.None],
@@ -68,7 +71,7 @@ const csp: CSP = {
   // embedding and for which there is limited opportunity for clickjacking.
   // A user should NEVER have cause to enter sensitive information into a page
   // under this domain.
-  [Directive.FrameAncestors]: [Src.Https],
+  [Directive.FrameAncestors]: [Src.Self, Src.Https],
 
   [Directive.BaseUri]: [Src.Self],
 };
