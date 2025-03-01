@@ -28,14 +28,12 @@ export const Header = {
   PermissionsPolicy: "Permissions-Policy",
 } as const;
 
-export const getCommonResponseHeaderMap = (
-  archiveDomain?: string
-): Readonly<Record<string, string>> => ({
+export const commonResponseHeaderMap: Readonly<Record<string, string>> = {
   [Header.AcceptRanges]: "bytes",
 
   [Header.ContentTypeOptions]: "nosniff",
 
-  [Header.ContentSecurityPolicy]: contentSecurityPolicy(archiveDomain),
+  [Header.ContentSecurityPolicy]: contentSecurityPolicy,
 
   [Header.ReferrerPolicy]: "strict-origin",
 
@@ -50,14 +48,12 @@ export const getCommonResponseHeaderMap = (
   // Explicitly forbid highly sensitive permissions.
   [Header.PermissionsPolicy]:
     "camera=(), microphone=(), geolocation=(), display-capture=()",
-});
+};
 
-export const getCommonResponseHeaders = (archiveDomain?: string) => {
+export const getCommonResponseHeaders = () => {
   const responseHeaders = new Headers();
 
-  for (const [header, value] of Object.entries(
-    getCommonResponseHeaderMap(archiveDomain)
-  )) {
+  for (const [header, value] of Object.entries(commonResponseHeaderMap)) {
     responseHeaders.set(header, value);
   }
 
@@ -113,17 +109,15 @@ const toContentLengthHeaderValue = (
 };
 
 export const getResponseHeaders = ({
-  archiveDomain,
   object,
   rangeRequest,
   multihash,
 }: {
-  archiveDomain: string;
   object: R2Object;
   rangeRequest?: RangeRequest;
   multihash: string;
 }): Headers => {
-  const responseHeaders = getCommonResponseHeaders(archiveDomain);
+  const responseHeaders = getCommonResponseHeaders();
 
   object.writeHttpMetadata(responseHeaders);
 

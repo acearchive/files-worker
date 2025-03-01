@@ -14,7 +14,6 @@ import {
   rawFileUrlPathFromMetadata,
   artifactPageUrlFromMetadata,
   locatorIsCanonical,
-  faviconUrl,
 } from "./url";
 import { imagePageTemplate, filePathStyles } from "./html";
 
@@ -102,13 +101,12 @@ const router = Router()
 
     const htmlDocument = imagePageTemplate({
       title: metadata.canonicalFilename,
-      iconPath: faviconUrl(env.ARCHIVE_DOMAIN),
       rawFileUrl: rawFileUrlPathFromMetadata(metadata),
       artifactPageUrl: artifactPageUrlFromMetadata(env.ARCHIVE_DOMAIN, metadata)
         .href,
     });
 
-    const responseHeaders = getCommonResponseHeaders(env.ARCHIVE_DOMAIN);
+    const responseHeaders = getCommonResponseHeaders();
     responseHeaders.set(Header.ContentType, "text/html");
 
     if (request.method === "GET") {
@@ -117,8 +115,8 @@ const router = Router()
       return Ok(undefined, responseHeaders);
     }
   })
-  .get("/assets/style.css", async (_request, env) => {
-    const responseHeaders = getCommonResponseHeaders(env.ARCHIVE_DOMAIN);
+  .get("/assets/style.css", async () => {
+    const responseHeaders = getCommonResponseHeaders();
     responseHeaders.set(Header.ContentType, "text/css");
 
     return Ok(filePathStyles, responseHeaders);

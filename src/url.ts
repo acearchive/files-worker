@@ -78,8 +78,3 @@ export const locatorIsCanonical = (
   metadata.canonicalSlug === locator.slug &&
   filenamesAreEquivalent(metadata.canonicalFilename, locator.filename) &&
   filenameIsPrettified(locator.filename);
-
-// This must be kept in sync with the static site, if the path ever changes over
-// there.
-export const faviconUrl = (archiveDomain: string): string =>
-  `https://${archiveDomain}/images/favicon-64x64.png`;

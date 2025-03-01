@@ -1,4 +1,4 @@
-import { getCommonResponseHeaderMap, Header } from "./headers";
+import { commonResponseHeaderMap, Header } from "./headers";
 
 export class ResponseError extends Error {
   readonly status: number;
@@ -23,7 +23,7 @@ export class ResponseError extends Error {
       status: this.status,
       headers: {
         [Header.ContentType]: "application/json",
-        ...getCommonResponseHeaderMap(),
+        ...commonResponseHeaderMap,
         ...this.headers,
       },
     });
