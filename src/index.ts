@@ -43,7 +43,7 @@ const router = Router()
 
     if (!locatorIsCanonical(locator, metadata)) {
       return Response.redirect(
-        rawFileUrlPathFromMetadata(metadata).toString(),
+        new URL(request.url).origin + rawFileUrlPathFromMetadata(metadata),
         301
       );
     }
@@ -73,7 +73,7 @@ const router = Router()
 
     if (!locatorIsCanonical(locator, metadata)) {
       return Response.redirect(
-        filePageUrlPathFromMetadata(metadata).toString(),
+        new URL(request.url).origin + filePageUrlPathFromMetadata(metadata),
         301
       );
     }
