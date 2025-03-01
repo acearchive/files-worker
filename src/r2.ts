@@ -1,7 +1,7 @@
 import { parseRangeRequest, toR2Range } from "./range";
 import { FileMultihash } from "./url";
 import {
-  getResponseHeaders,
+  getFileResponseHeaders,
   headersToDebugRepr,
   parseConditionalHeaders,
 } from "./headers";
@@ -56,7 +56,7 @@ export const getArtifactFile = async ({
 
     console.log(`Object size: ${object.size}`);
 
-    const responseHeaders = getResponseHeaders({
+    const responseHeaders = getFileResponseHeaders({
       object,
       rangeRequest,
       multihash,
@@ -81,7 +81,7 @@ export const getArtifactFile = async ({
       throw NotFound(request);
     }
 
-    const responseHeaders = getResponseHeaders({ object, multihash });
+    const responseHeaders = getFileResponseHeaders({ object, multihash });
 
     console.log(headersToDebugRepr("Response headers", responseHeaders));
 

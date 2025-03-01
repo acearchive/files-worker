@@ -43,7 +43,7 @@ export const commonResponseHeaderMap: Readonly<Record<string, string>> = {
     60 * 60 * 24 * 365
   }; includeSubDomains; preload`,
 
-  [Header.CacheControl]: `public, max-age=${60 * 60 * 4}`,
+  [Header.CacheControl]: "no-cache",
 
   [Header.AccessControlAllowOrigin]: "*",
 
@@ -110,7 +110,7 @@ const toContentLengthHeaderValue = (
   }
 };
 
-export const getResponseHeaders = ({
+export const getFileResponseHeaders = ({
   object,
   rangeRequest,
   multihash,
@@ -128,6 +128,7 @@ export const getResponseHeaders = ({
     Header.LastModified,
     toLastModifiedHeaderValue(object.uploaded)
   );
+  responseHeaders.set(Header.CacheControl, `public, max-age=${60 * 60 * 4}`);
 
   if (rangeRequest === undefined || rangeRequest.kind === "whole-document") {
     responseHeaders.set(Header.ContentLength, object.size.toString());
