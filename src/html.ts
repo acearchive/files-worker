@@ -68,6 +68,28 @@ const imageFilePage = ({
     `,
   });
 
+const videoFilePage = ({
+  title,
+  artifactPageUrl,
+  rawFileUrl,
+  mediaType,
+}: {
+  title: string;
+  artifactPageUrl: string;
+  rawFileUrl: string;
+  mediaType: string;
+}) =>
+  baseFilePageTemplate({
+    title,
+    artifactPageUrl,
+    rawFileUrl,
+    unsafeEmbed: `
+      <video controls>
+        <source src="${encodeURI(rawFileUrl)}" type="${mediaType}" />
+      </video>
+    `,
+  });
+
 const pdfFilePage = ({
   title,
   artifactPageUrl,
@@ -102,6 +124,8 @@ export const filePage = ({
 }) => {
   if (mediaType.startsWith("image/")) {
     return imageFilePage({ title, artifactPageUrl, rawFileUrl });
+  } else if (mediaType.startsWith("video/")) {
+    return videoFilePage({ title, artifactPageUrl, rawFileUrl, mediaType });
   } else if (mediaType === "application/pdf") {
     return pdfFilePage({ title, artifactPageUrl, rawFileUrl });
   } else {
