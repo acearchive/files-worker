@@ -25,7 +25,7 @@ interface Env {
 }
 
 const router = Router()
-  .all("/raw/:slug/:filename", async (request, env: Env) => {
+  .all("/raw/:slug/:filename+", async (request, env: Env) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
       throw MethodNotAllowed(request.method, ["GET", "HEAD"]);
     }
@@ -55,7 +55,7 @@ const router = Router()
       request,
     });
   })
-  .all("/artifacts/:slug/:filename", async (request, env) => {
+  .all("/artifacts/:slug/:filename+", async (request, env) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
       throw MethodNotAllowed(request.method, ["GET", "HEAD"]);
     }
@@ -82,8 +82,6 @@ const router = Router()
     const prefersHtml = acceptHeader
       ? prefersHtmlOver(acceptHeader, metadata.mediaType)
       : false;
-    console.log(`acceptHeader: ${acceptHeader}`);
-    console.log(`prefersHtml: ${prefersHtml}`);
 
     const htmlDocument = prefersHtml
       ? filePage({
