@@ -106,8 +106,8 @@ const pdfFilePage = ({
     rawFileUrl,
     unsafeEmbed: `
       <object data="${encodeURI(
-        rawFileUrl
-      )}" type="application/pdf" width="100%" height="100%">
+      rawFileUrl
+    )}" type="application/pdf" width="100%" height="100%">
       </object>
     `,
   });
@@ -127,8 +127,8 @@ const htmlFilePage = ({
     rawFileUrl,
     unsafeEmbed: `
       <iframe src="${encodeURI(
-        rawFileUrl
-      )}" width="100%" height="100%"></iframe>
+      rawFileUrl
+    )}" width="100%" height="100%"></iframe>
     `,
   });
 
@@ -216,9 +216,11 @@ export const filePageStyles = `
 
   img {
     display: block;
-    height: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
     width: auto;
-    object-fit: none;
+    height: auto;
+    object-fit: contain;
   }
 
   footer {
