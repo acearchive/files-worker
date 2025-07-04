@@ -214,7 +214,7 @@ export const filePageStyles = `
     stroke-width: 0.5px;
   }
 
-  img {
+  img, video {
     display: block;
     max-width: 100vw;
     max-height: 100vh;
