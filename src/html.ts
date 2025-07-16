@@ -346,6 +346,22 @@ export const filePageStyles = `
     align-items: center;
     gap: 0.5rem;
   }
+
+  @media (width < 40rem) {
+    footer {
+      justify-content: start;
+      left: 1rem;
+    }
+
+    #buttons {
+      flex-direction: column;
+      margin-left: 0;
+    }
+
+    #buttons, #toast {
+      margin-left: 0;
+    }
+  }
 `;
 
 export const filePageScript = `

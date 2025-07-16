@@ -46,8 +46,7 @@ const router = Router()
 
     if (!locatorIsCanonical(locator, metadata)) {
       return Response.redirect(
-        new URL(request.url).origin +
-        rawFileUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
+        new URL(request.url).origin + rawFileUrlPathFromMetadata(metadata),
         301
       );
     }
@@ -72,7 +71,7 @@ const router = Router()
     }
 
     return Response.redirect(
-      rawFileUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
+      `https://${env.FILES_DOMAIN}${rawFileUrlPathFromMetadata(metadata)}`,
       301
     );
   })
@@ -94,8 +93,7 @@ const router = Router()
 
     if (!locatorIsCanonical(locator, metadata)) {
       return Response.redirect(
-        new URL(request.url).origin +
-        filePageUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
+        new URL(request.url).origin + filePageUrlPathFromMetadata(metadata),
         301
       );
     }
@@ -109,7 +107,7 @@ const router = Router()
       ? filePage({
         mediaType: metadata.mediaType,
         title: metadata.canonicalFilename,
-        rawFileUrl: rawFileUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
+        rawFileUrl: rawFileUrlPathFromMetadata(metadata),
         artifactPageUrl: artifactPageUrlFromMetadata(
           env.ARCHIVE_DOMAIN,
           metadata
@@ -161,7 +159,7 @@ const router = Router()
     }
 
     return Response.redirect(
-      filePageUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
+      `https://${env.FILES_DOMAIN}${filePageUrlPathFromMetadata(metadata)}`,
       301
     );
   })
