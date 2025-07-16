@@ -320,10 +320,14 @@ export const filePageStyles = `
     gap: 1rem;
     flex-direction: column;
     justify-content: center;
+    margin-left: 1rem;
+    margin-right: 1rem;
   }
 
   #buttons, #toast {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 1rem;
     border-radius: 1rem;
     background-color: #212121;
@@ -348,18 +352,8 @@ export const filePageStyles = `
   }
 
   @media (width < 40rem) {
-    footer {
-      justify-content: start;
-      left: 1rem;
-    }
-
-    #buttons {
-      flex-direction: column;
-      margin-left: 0;
-    }
-
-    #buttons, #toast {
-      margin-left: 0;
+    a, button {
+      flex-grow: 1;
     }
   }
 `;
