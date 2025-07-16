@@ -62,18 +62,16 @@ export const rawFileUrlPathFromMetadata = (
   )}`;
 
 export const filePageShortUrlPathFromMetadata = (
-  filesDomain: string,
   fileMetadata: ArtifactFileMetadata
 ): string =>
-  `https://${filesDomain}/a/${fileMetadata.artifactId}/${prettifyFilename(
+  `/a/${fileMetadata.artifactId}/${prettifyFilename(
     fileMetadata.canonicalFilename
   )}`;
 
 export const rawFileShortUrlPathFromMetadata = (
-  filesDomain: string,
   fileMetadata: ArtifactFileMetadata
 ): string =>
-  `https://${filesDomain}/r/${fileMetadata.artifactId}/${prettifyFilename(
+  `/r/${fileMetadata.artifactId}/${prettifyFilename(
     fileMetadata.canonicalFilename
   )}`;
 

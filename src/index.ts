@@ -11,7 +11,6 @@ import {
 } from "./status";
 import {
   filePageUrlPathFromMetadata,
-  rawFileUrlPathFromMetadata,
   artifactPageUrlFromMetadata,
   locatorIsCanonical,
   filePageShortUrlPathFromMetadata,
@@ -24,7 +23,6 @@ interface Env {
   SECONDARY_BUCKET: R2Bucket | undefined;
   DB: D1Database;
   ARCHIVE_DOMAIN: string;
-  FILES_DOMAIN: string;
 }
 
 const router = Router()
@@ -44,21 +42,16 @@ const router = Router()
       throw NotFound(request);
     }
 
-    if (!locatorIsCanonical(locator, metadata)) {
-      return Response.redirect(
-        new URL(request.url).origin + rawFileUrlPathFromMetadata(metadata),
-        301
-      );
-    }
-
-    return await getArtifactFileWithFallback({
-      primaryBucket: env.PRIMARY_BUCKET,
-      secondaryBucket: env.SECONDARY_BUCKET,
-      multihash: metadata.multihash,
-      request,
-    });
+    return Response.redirect(
+      new URL(request.url).origin + rawFileShortUrlPathFromMetadata(metadata),
+      301
+    );
   })
   .all("/r/:id/:filename+", async (request, env: Env) => {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      throw MethodNotAllowed(request.method, ["GET", "HEAD"]);
+    }
+
     const locator = {
       id: request.params.id,
       filename: request.params.filename,
@@ -70,10 +63,19 @@ const router = Router()
       throw NotFound(request);
     }
 
-    return Response.redirect(
-      `https://${env.FILES_DOMAIN}${rawFileUrlPathFromMetadata(metadata)}`,
-      301
-    );
+    if (!locatorIsCanonical(locator, metadata)) {
+      return Response.redirect(
+        new URL(request.url).origin + rawFileShortUrlPathFromMetadata(metadata),
+        301
+      );
+    }
+
+    return await getArtifactFileWithFallback({
+      primaryBucket: env.PRIMARY_BUCKET,
+      secondaryBucket: env.SECONDARY_BUCKET,
+      multihash: metadata.multihash,
+      request,
+    });
   })
   .all("/artifacts/:slug/:filename+", async (request, env) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -107,19 +109,14 @@ const router = Router()
       ? filePage({
         mediaType: metadata.mediaType,
         title: metadata.canonicalFilename,
-        rawFileUrl: rawFileUrlPathFromMetadata(metadata),
         artifactPageUrl: artifactPageUrlFromMetadata(
           env.ARCHIVE_DOMAIN,
           metadata
         ).href,
-        shortFileUrl: filePageShortUrlPathFromMetadata(
-          env.FILES_DOMAIN,
-          metadata
-        ),
-        shortRawFileUrl: rawFileShortUrlPathFromMetadata(
-          env.FILES_DOMAIN,
-          metadata
-        ),
+        shortFileUrl:
+          new URL(request.url).origin +
+          filePageShortUrlPathFromMetadata(metadata),
+        shortRawFileUrlPath: rawFileShortUrlPathFromMetadata(metadata),
       })
       : undefined;
 
@@ -159,7 +156,7 @@ const router = Router()
     }
 
     return Response.redirect(
-      `https://${env.FILES_DOMAIN}${filePageUrlPathFromMetadata(metadata)}`,
+      new URL(request.url).origin + filePageUrlPathFromMetadata(metadata),
       301
     );
   })
