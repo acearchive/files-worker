@@ -1,11 +1,31 @@
-// Information used to locate an artifact file.
-export type ArtifactFileLocator = Readonly<{
+type ArtifactFileByIdLocator = Readonly<{
+  // The artifact ID.
+  id: string;
+
+  // This can be the canonical filename or any filename alias.
+  filename: string;
+}>;
+
+type ArtifactFileBySlugLocator = Readonly<{
   // This can be the canonical artifact slug or any slug alias.
   slug: string;
 
   // This can be the canonical filename or any filename alias.
   filename: string;
 }>;
+
+// Information used to locate an artifact file.
+export type ArtifactFileLocator =
+  | ArtifactFileBySlugLocator
+  | ArtifactFileByIdLocator;
+
+export const locatorIsById = (
+  locator: ArtifactFileLocator
+): locator is ArtifactFileByIdLocator => Object.hasOwn(locator, "id");
+
+export const locatorIsBySlug = (
+  locator: ArtifactFileLocator
+): locator is ArtifactFileBySlugLocator => Object.hasOwn(locator, "slug");
 
 export type FileMultihash = string;
 
@@ -28,16 +48,17 @@ export const artifactPageUrlFromMetadata = (
 };
 
 export const filePageUrlPathFromMetadata = (
+  filesDomain: string,
   fileMetadata: ArtifactFileMetadata
 ): string =>
-  `/artifacts/${fileMetadata.canonicalSlug}/${prettifyFilename(
-    fileMetadata.canonicalFilename
-  )}`;
+  `https://${filesDomain}/artifacts/${fileMetadata.canonicalSlug
+  }/${prettifyFilename(fileMetadata.canonicalFilename)}`;
 
 export const rawFileUrlPathFromMetadata = (
+  filesDomain: string,
   fileMetadata: ArtifactFileMetadata
 ): string =>
-  `/raw/${fileMetadata.canonicalSlug}/${prettifyFilename(
+  `https://${filesDomain}/raw/${fileMetadata.canonicalSlug}/${prettifyFilename(
     fileMetadata.canonicalFilename
   )}`;
 
@@ -92,6 +113,6 @@ export const locatorIsCanonical = (
   locator: ArtifactFileLocator,
   metadata: ArtifactFileMetadata
 ): boolean =>
-  metadata.canonicalSlug === locator.slug &&
+  (locatorIsById(locator) || metadata.canonicalSlug === locator.slug) &&
   filenamesAreEquivalent(metadata.canonicalFilename, locator.filename) &&
   filenameIsPrettified(locator.filename);

@@ -3,6 +3,8 @@ import {
   ArtifactFileLocator,
   FileMultihash,
   uglifyFilename,
+  locatorIsById,
+  locatorIsBySlug,
 } from "./url";
 
 export const getFileMetadata = async (
@@ -38,23 +40,31 @@ export const getFileMetadata = async (
       LEFT JOIN
         file_aliases ON file_aliases.file = files.id
       WHERE
-        (
-          artifacts.slug = ?1
-          OR artifact_aliases.slug = ?1
-        ) AND (
-          files.filename = ?2
-          OR file_aliases.filename = ?2
+        CASE
+          WHEN ?1 IS NOT NULL THEN
+            latest_artifacts.artifact_id = ?1
+          ELSE
+            (
+              artifacts.slug = ?2
+              OR artifact_aliases.slug = ?2
+            )
+        END AND (
+          files.filename = ?3
+          OR file_aliases.filename = ?3
         )
       LIMIT 1
     `
   );
+
+  const artifactId = locatorIsById(locator) ? locator.id : null;
+  const artifactSlug = locatorIsBySlug(locator) ? locator.slug : null;
 
   // Filenames will only ever be stored "uglified," because
   // artifact-submit-action validates that filenames must contain a file
   // extension, so filenames in the database will always contain a file
   // extension.
   const row = await stmt
-    .bind(locator.slug, uglifyFilename(locator.filename))
+    .bind(artifactId, artifactSlug, uglifyFilename(locator.filename))
     .first<Row | null>();
 
   if (row === null) {

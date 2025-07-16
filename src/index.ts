@@ -46,7 +46,8 @@ const router = Router()
 
     if (!locatorIsCanonical(locator, metadata)) {
       return Response.redirect(
-        new URL(request.url).origin + rawFileUrlPathFromMetadata(metadata),
+        new URL(request.url).origin +
+        rawFileUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
         301
       );
     }
@@ -57,6 +58,23 @@ const router = Router()
       multihash: metadata.multihash,
       request,
     });
+  })
+  .all("/r/:id/:filename+", async (request, env: Env) => {
+    const locator = {
+      id: request.params.id,
+      filename: request.params.filename,
+    };
+
+    const metadata = await getFileMetadata(env.DB, locator);
+
+    if (metadata === undefined) {
+      throw NotFound(request);
+    }
+
+    return Response.redirect(
+      rawFileUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
+      301
+    );
   })
   .all("/artifacts/:slug/:filename+", async (request, env) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -76,7 +94,8 @@ const router = Router()
 
     if (!locatorIsCanonical(locator, metadata)) {
       return Response.redirect(
-        new URL(request.url).origin + filePageUrlPathFromMetadata(metadata),
+        new URL(request.url).origin +
+        filePageUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
         301
       );
     }
@@ -90,7 +109,7 @@ const router = Router()
       ? filePage({
         mediaType: metadata.mediaType,
         title: metadata.canonicalFilename,
-        rawFileUrl: rawFileUrlPathFromMetadata(metadata),
+        rawFileUrl: rawFileUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
         artifactPageUrl: artifactPageUrlFromMetadata(
           env.ARCHIVE_DOMAIN,
           metadata
@@ -128,6 +147,23 @@ const router = Router()
 
       return response;
     }
+  })
+  .all("/a/:id/:filename+", async (request, env: Env) => {
+    const locator = {
+      id: request.params.id,
+      filename: request.params.filename,
+    };
+
+    const metadata = await getFileMetadata(env.DB, locator);
+
+    if (metadata === undefined) {
+      throw NotFound(request);
+    }
+
+    return Response.redirect(
+      filePageUrlPathFromMetadata(env.FILES_DOMAIN, metadata),
+      301
+    );
   })
   .get("/assets/style.css", async () => {
     const responseHeaders = getCommonResponseHeaders();
