@@ -14,14 +14,17 @@ import {
   rawFileUrlPathFromMetadata,
   artifactPageUrlFromMetadata,
   locatorIsCanonical,
+  filePageShortUrlPathFromMetadata,
+  rawFileShortUrlPathFromMetadata,
 } from "./url";
-import { filePageStyles, filePage } from "./html";
+import { filePageStyles, filePage, filePageScript } from "./html";
 
 interface Env {
   PRIMARY_BUCKET: R2Bucket;
   SECONDARY_BUCKET: R2Bucket | undefined;
   DB: D1Database;
   ARCHIVE_DOMAIN: string;
+  FILES_DOMAIN: string;
 }
 
 const router = Router()
@@ -85,14 +88,22 @@ const router = Router()
 
     const htmlDocument = prefersHtml
       ? filePage({
-          mediaType: metadata.mediaType,
-          title: metadata.canonicalFilename,
-          rawFileUrl: rawFileUrlPathFromMetadata(metadata),
-          artifactPageUrl: artifactPageUrlFromMetadata(
-            env.ARCHIVE_DOMAIN,
-            metadata
-          ).href,
-        })
+        mediaType: metadata.mediaType,
+        title: metadata.canonicalFilename,
+        rawFileUrl: rawFileUrlPathFromMetadata(metadata),
+        artifactPageUrl: artifactPageUrlFromMetadata(
+          env.ARCHIVE_DOMAIN,
+          metadata
+        ).href,
+        shortFileUrl: filePageShortUrlPathFromMetadata(
+          env.FILES_DOMAIN,
+          metadata
+        ),
+        shortRawFileUrl: rawFileShortUrlPathFromMetadata(
+          env.FILES_DOMAIN,
+          metadata
+        ),
+      })
       : undefined;
 
     if (htmlDocument !== undefined) {
@@ -123,6 +134,12 @@ const router = Router()
     responseHeaders.set(Header.ContentType, "text/css");
 
     return Ok(filePageStyles, responseHeaders);
+  })
+  .get("/assets/script.js", async () => {
+    const responseHeaders = getCommonResponseHeaders();
+    responseHeaders.set(Header.ContentType, "application/javascript");
+
+    return Ok(filePageScript, responseHeaders);
   })
   .all("*", async (request) => {
     throw NotFound(request);

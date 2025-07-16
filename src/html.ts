@@ -12,11 +12,15 @@ const baseFilePageTemplate = ({
   title,
   artifactPageUrl,
   rawFileUrl,
+  shortFileUrl,
+  shortRawFileUrl,
   unsafeEmbed,
 }: {
   title: string;
   artifactPageUrl: string;
   rawFileUrl: string;
+  shortFileUrl: string;
+  shortRawFileUrl: string;
   unsafeEmbed: string;
 }) => `
   <!DOCTYPE html>
@@ -26,6 +30,7 @@ const baseFilePageTemplate = ({
       <title>${escapeHtml(title)}</title>
       <link rel="icon" href="https://${PROD_ARCHIVE_DOMAIN}/images/favicon-64x64.png" />
       <link rel="stylesheet" type="text/css" href="/assets/style.css" />
+      <script type="module" src="/assets/script.js" async></script>
       <meta name="viewport" content="width=device-width, initial-scale=1" />
     </head>
     <body>
@@ -46,6 +51,22 @@ const baseFilePageTemplate = ({
           </svg>
           <span>Raw</span>
         </a>
+        <button type="button" id="copy-short-url-button" data-url="${encodeURI(
+  shortFileUrl
+)}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-share-fill" viewBox="0 0 16 16">
+            <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"/>
+          </svg>
+          <span>Short URL</span>
+        </button>
+        <button type="button" id="copy-short-raw-url-button" data-url="${encodeURI(
+  shortRawFileUrl
+)}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-share-fill" viewBox="0 0 16 16">
+            <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"/>
+          </svg>
+          <span>Short Raw URL</span>
+        </button>
       </footer>
     </body>
   </html>
@@ -55,15 +76,21 @@ const imageFilePage = ({
   title,
   artifactPageUrl,
   rawFileUrl,
+  shortFileUrl,
+  shortRawFileUrl,
 }: {
   title: string;
   artifactPageUrl: string;
   rawFileUrl: string;
+  shortFileUrl: string;
+  shortRawFileUrl: string;
 }) =>
   baseFilePageTemplate({
     title,
     artifactPageUrl,
     rawFileUrl,
+    shortFileUrl,
+    shortRawFileUrl,
     unsafeEmbed: `
       <img src="${encodeURI(rawFileUrl)}" />
     `,
@@ -74,16 +101,22 @@ const videoFilePage = ({
   artifactPageUrl,
   rawFileUrl,
   mediaType,
+  shortFileUrl,
+  shortRawFileUrl,
 }: {
   title: string;
   artifactPageUrl: string;
   rawFileUrl: string;
   mediaType: string;
+  shortFileUrl: string;
+  shortRawFileUrl: string;
 }) =>
   baseFilePageTemplate({
     title,
     artifactPageUrl,
     rawFileUrl,
+    shortFileUrl,
+    shortRawFileUrl,
     unsafeEmbed: `
       <video controls>
         <source src="${encodeURI(rawFileUrl)}" type="${mediaType}" />
@@ -95,15 +128,21 @@ const pdfFilePage = ({
   title,
   artifactPageUrl,
   rawFileUrl,
+  shortFileUrl,
+  shortRawFileUrl,
 }: {
   title: string;
   artifactPageUrl: string;
   rawFileUrl: string;
+  shortFileUrl: string;
+  shortRawFileUrl: string;
 }) =>
   baseFilePageTemplate({
     title,
     artifactPageUrl,
     rawFileUrl,
+    shortFileUrl,
+    shortRawFileUrl,
     unsafeEmbed: `
       <object data="${encodeURI(
       rawFileUrl
@@ -116,15 +155,21 @@ const htmlFilePage = ({
   title,
   artifactPageUrl,
   rawFileUrl,
+  shortFileUrl,
+  shortRawFileUrl,
 }: {
   title: string;
   artifactPageUrl: string;
   rawFileUrl: string;
+  shortFileUrl: string;
+  shortRawFileUrl: string;
 }) =>
   baseFilePageTemplate({
     title,
     artifactPageUrl,
     rawFileUrl,
+    shortFileUrl,
+    shortRawFileUrl,
     unsafeEmbed: `
       <iframe src="${encodeURI(
       rawFileUrl
@@ -137,20 +182,49 @@ export const filePage = ({
   title,
   artifactPageUrl,
   rawFileUrl,
+  shortFileUrl,
+  shortRawFileUrl,
 }: {
   mediaType: string;
   title: string;
   artifactPageUrl: string;
   rawFileUrl: string;
+  shortFileUrl: string;
+  shortRawFileUrl: string;
 }) => {
   if (mediaType === "text/html") {
-    return htmlFilePage({ title, artifactPageUrl, rawFileUrl });
+    return htmlFilePage({
+      title,
+      artifactPageUrl,
+      rawFileUrl,
+      shortFileUrl,
+      shortRawFileUrl,
+    });
   } else if (mediaType.startsWith("image/")) {
-    return imageFilePage({ title, artifactPageUrl, rawFileUrl });
+    return imageFilePage({
+      title,
+      artifactPageUrl,
+      rawFileUrl,
+      shortFileUrl,
+      shortRawFileUrl,
+    });
   } else if (mediaType.startsWith("video/")) {
-    return videoFilePage({ title, artifactPageUrl, rawFileUrl, mediaType });
+    return videoFilePage({
+      title,
+      artifactPageUrl,
+      rawFileUrl,
+      mediaType,
+      shortFileUrl,
+      shortRawFileUrl,
+    });
   } else if (mediaType === "application/pdf") {
-    return pdfFilePage({ title, artifactPageUrl, rawFileUrl });
+    return pdfFilePage({
+      title,
+      artifactPageUrl,
+      rawFileUrl,
+      shortFileUrl,
+      shortRawFileUrl,
+    });
   } else {
     return undefined;
   }
@@ -186,7 +260,11 @@ export const filePageStyles = `
     width: 100vw;
   }
 
-  a {
+  button {
+    background-color: transparent;
+  }
+
+  a, button {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -197,20 +275,20 @@ export const filePageStyles = `
     color: #d3e5c1;
   }
 
-  a:hover {
+  a:hover, button:hover {
     background-color: #d3e5c1;
     color: #212121;
   }
 
-  a svg path {
+  :is(a, button) svg path {
     stroke: #d3e5c1;
   }
 
-  a:hover svg path {
+  :is(a:hover, button:hover) svg path {
     stroke: #212121;
   }
 
-  a svg path {
+  :is(a, button) svg path {
     stroke-width: 0.5px;
   }
 
@@ -233,4 +311,23 @@ export const filePageStyles = `
     padding: 0.8rem;
     filter: drop-shadow(2px 2px 2px black);
   }
+`;
+
+export const filePageScript = `
+  const copyShortFileUrlButton = document.getElementById("copy-short-url-button");
+  const copyShortRawFileUrlButton = document.getElementById("copy-short-raw-url-button");
+
+  copyShortFileUrlButton.addEventListener("click", () => {
+    const url = copyShortFileUrlButton.dataset.url;
+    navigator.clipboard.writeText(url).then(() => {
+      alert("Short file URL copied to clipboard!");
+    });
+  });
+
+  copyShortRawFileUrlButton.addEventListener("click", () => {
+    const url = copyShortRawFileUrlButton.dataset.url;
+    navigator.clipboard.writeText(url).then(() => {
+      alert("Short raw file URL copied to clipboard!");
+    });
+  });
 `;

@@ -12,6 +12,7 @@ export type FileMultihash = string;
 // Metadata about an artifact file.
 export type ArtifactFileMetadata = Readonly<{
   multihash: FileMultihash;
+  artifactId: string;
   canonicalSlug: string;
   canonicalFilename: string;
   mediaType: string;
@@ -37,6 +38,22 @@ export const rawFileUrlPathFromMetadata = (
   fileMetadata: ArtifactFileMetadata
 ): string =>
   `/raw/${fileMetadata.canonicalSlug}/${prettifyFilename(
+    fileMetadata.canonicalFilename
+  )}`;
+
+export const filePageShortUrlPathFromMetadata = (
+  filesDomain: string,
+  fileMetadata: ArtifactFileMetadata
+): string =>
+  `https://${filesDomain}/a/${fileMetadata.artifactId}/${prettifyFilename(
+    fileMetadata.canonicalFilename
+  )}`;
+
+export const rawFileShortUrlPathFromMetadata = (
+  filesDomain: string,
+  fileMetadata: ArtifactFileMetadata
+): string =>
+  `https://${filesDomain}/r/${fileMetadata.artifactId}/${prettifyFilename(
     fileMetadata.canonicalFilename
   )}`;
 

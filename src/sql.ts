@@ -10,6 +10,7 @@ export const getFileMetadata = async (
   locator: ArtifactFileLocator
 ): Promise<ArtifactFileMetadata | undefined> => {
   interface Row {
+    artifact_id: string;
     slug: string;
     filename: string;
     multihash: FileMultihash;
@@ -21,6 +22,7 @@ export const getFileMetadata = async (
   const stmt = db.prepare(
     `
       SELECT
+        latest_artifacts.artifact_id,
         artifacts.slug,
         files.filename,
         files.multihash,
@@ -61,6 +63,7 @@ export const getFileMetadata = async (
 
   return {
     multihash: row.multihash,
+    artifactId: row.artifact_id,
     canonicalSlug: row.slug,
     canonicalFilename: row.filename,
     mediaType: row.media_type,

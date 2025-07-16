@@ -42,7 +42,7 @@ const csp: CSP = {
 
   // Technically redundant with the `default-src`, but important enough to be
   // explicit about.
-  [Directive.ScriptSrc]: [Src.None],
+  [Directive.ScriptSrc]: [Src.Self],
 
   // We host CSS on the main site for writing transcripts.
   [Directive.StyleSrc]: [

@@ -15,6 +15,7 @@ fallthrough = true
 
   [env.prod.vars]
   ARCHIVE_DOMAIN = "acearchive.lgbt"
+  FILES_DOMAIN = "files.acearchive.lgbt"
 
   [[env.prod.d1_databases]]
   binding = "DB"
@@ -35,6 +36,7 @@ fallthrough = true
 
   [env.dev.vars]
   ARCHIVE_DOMAIN = "dev.acearchive.lgbt"
+  FILES_DOMAIN = "files-dev.acearchive.lgbt"
 
   [[env.dev.d1_databases]]
   binding = "DB"
