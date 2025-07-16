@@ -262,7 +262,12 @@ export const filePageStyles = `
     justify-content: center;
     background-color: #212121;
     height: 100vh;
+  }
+
+  /* We need to keep the browser styles from overriding the button font. */
+  body, button {
     font-family: Fira Sans, Noto Sans, sans-serif;
+    font-size: 1rem;
   }
 
   main {
@@ -354,6 +359,12 @@ export const filePageStyles = `
   @media (width < 40rem) {
     a, button {
       flex-grow: 1;
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+    }
+
+    svg {
+      transform: scale(0.9);
     }
   }
 `;
